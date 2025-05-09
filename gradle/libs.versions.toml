@@ -15,6 +15,7 @@ activityCompose = "1.10.0" # A recent stable version
 coreKtx = "1.15.0" # A recent stable version
 lifecycleRuntimeKtx = "2.8.7" # A recent stable version
 navigationCompose = "2.7.7" # Added navigation compose version
+room = "2.7.1" # Added Room version
 
 # Networking
 retrofit = "2.11.0"
@@ -52,6 +53,11 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+
+# Room
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 # Networking
 squareup-retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
