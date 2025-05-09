@@ -13,9 +13,9 @@ fun AppNavigation() {
     NavHost(navController = navController, startDestination = ScreenRoutes.HOME) {
         composable(ScreenRoutes.HOME) {
             HomeScreen(
-                onNavigateToSearchResults = {
-                    navController.navigate(ScreenRoutes.SEARCH_RESULTS)
-                }
+                // onNavigateToSearchResults = { // This parameter is no longer needed
+                // navController.navigate(ScreenRoutes.SEARCH_RESULTS)
+                // }
             )
         }
         composable(ScreenRoutes.SEARCH_RESULTS) {
