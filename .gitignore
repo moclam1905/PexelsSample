@@ -1,19 +1,45 @@
+# Android Studio / IntelliJ
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.idea/
+.gradle/
 local.properties
-docs
-ai
-/docs
-/ai
+build/
+captures/
+.DS_Store
+
+# Secrets (if any, though ideally use other mechanisms)
+# secrets.properties
+
+# Android specific
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Keystore files (should not be committed)
+*.jks
+*.keystore
+
+# Google services
+app/google-services.json
+
+# Crashlytics
+app/fabric.properties
+
+# Proguard
+proguard/
+
+# Lint
+lint/
+
+# Test reports
+*/build/reports/
+*/build/test-results/
+*/build/outputs/androidTest-results/
+*/build/outputs/mapping/
+
+# Emulator snapshots
+.android/
+
+# Kover report
+*.binary
