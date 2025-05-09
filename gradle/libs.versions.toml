@@ -14,6 +14,7 @@ composeBom = "2024.04.01"
 activityCompose = "1.10.0" # A recent stable version
 coreKtx = "1.15.0" # A recent stable version
 lifecycleRuntimeKtx = "2.8.7" # A recent stable version
+lifecycleRuntimeCompose = "2.8.7" # Added to match lifecycleRuntimeKtx for collectAsStateWithLifecycle
 navigationCompose = "2.7.7" # Added navigation compose version
 room = "2.7.1" # Added Room version
 
@@ -22,6 +23,9 @@ retrofit = "2.11.0"
 okhttp = "4.12.0"
 kotlinxSerializationJson = "1.6.3"
 retrofitKotlinxSerializationConverter = "1.0.0"
+
+# Coroutines
+kotlinxCoroutines = "1.8.1" # Added for kotlinx-coroutines-test
 
 # Hilt
 hilt = "2.50"
@@ -33,6 +37,9 @@ ksp = "2.0.0-1.0.21"
 junit = "4.13.2"
 androidxTestExtJunit = "1.2.1"
 espressoCore = "3.6.1"
+turbine = "1.1.0" # Added for Turbine
+mockk = "1.13.10" # Added for MockK
+truth = "1.4.2" # Added for Google Truth
 
 [libraries]
 # Android Gradle Plugin
@@ -40,6 +47,7 @@ android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", ver
 
 # Kotlin
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+jetbrains-kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" } # Added for testing
 
 # Jetpack Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -50,6 +58,7 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" } # Added navigation compose library
+androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" } # Added
 
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -79,6 +88,10 @@ androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" } # For Compose tests
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" } # For Compose tests
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" } # Added
+mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" } # Added
+mockk-agent = { group = "io.mockk", name = "mockk-agent", version.ref = "mockk" } # Added
+google-truth = { group = "com.google.truth", name = "truth", version.ref = "truth" } # Added
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -18,22 +18,26 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+// import androidx.compose.runtime.mutableStateOf // No longer needed for searchQuery
+// import androidx.compose.runtime.remember // No longer needed for searchQuery
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     // onNavigateToSearchResults: () -> Unit, // Commenting out as per story, search happens on this screen
-    viewModel: HomeViewModel = hiltViewModel()
+    // viewModel: HomeViewModel = hiltViewModel() // Will be replaced by SearchViewModel
+    searchViewModel: SearchViewModel = hiltViewModel() // Inject SearchViewModel
 ) {
-    val searchQuery = remember { mutableStateOf("") }
+    // val searchQuery = remember { mutableStateOf("") } // Replaced by ViewModel state
+    val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -54,8 +58,8 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
-                    value = searchQuery.value,
-                    onValueChange = { searchQuery.value = it },
+                    value = currentQuery, // Use state from ViewModel
+                    onValueChange = { searchViewModel.onQueryChanged(it) }, // Call ViewModel's method
                     placeholder = { Text("Search for images...") },
                     label = { Text("Search") },
                     modifier = Modifier.weight(1f), // TextField takes remaining space
@@ -69,7 +73,8 @@ fun HomeScreen(
                 )
                 IconButton(onClick = {
                     // Story 2.2 will connect this to ViewModel
-                    Log.d("HomeScreen", "Search button clicked with query: ${searchQuery.value}")
+                    // Log.d("HomeScreen", "Search button clicked with query: ${searchQuery.value}")
+                    searchViewModel.onSearchClicked() // Call ViewModel's method
                 }) {
                     Icon(
                         imageVector = Icons.Filled.Search,
