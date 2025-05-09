@@ -14,5 +14,5 @@ data class PexelsSearchResponseDto(
     @SerialName("total_results")
     val totalResults: Int,
     @SerialName("next_page")
-    val nextPage: String? // Nullable as per story
+    val nextPage: String? = null // Explicitly provide default null
 ) 
