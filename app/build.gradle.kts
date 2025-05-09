@@ -59,6 +59,12 @@ android {
     hilt {
         enableAggregatingTask = false
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {

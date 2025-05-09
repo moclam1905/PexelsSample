@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Box
 // import androidx.compose.material3.Button // Will remove this if not used elsewhere
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,6 +40,7 @@ fun HomeScreen(
 ) {
     // val searchQuery = remember { mutableStateOf("") } // Replaced by ViewModel state
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
+    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle() // Collect isLoading
 
     Scaffold(
         topBar = {
@@ -64,6 +67,7 @@ fun HomeScreen(
                     label = { Text("Search") },
                     modifier = Modifier.weight(1f), // TextField takes remaining space
                     singleLine = true,
+                    enabled = !isLoadingValue, // Disable when loading
                     leadingIcon = { // Optional leading icon as mentioned in story
                         Icon(
                             imageVector = Icons.Filled.Search,
@@ -75,7 +79,7 @@ fun HomeScreen(
                     // Story 2.2 will connect this to ViewModel
                     // Log.d("HomeScreen", "Search button clicked with query: ${searchQuery.value}")
                     searchViewModel.onSearchClicked() // Call ViewModel's method
-                }) {
+                }, enabled = !isLoadingValue) {
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = "Search button"
@@ -89,6 +93,15 @@ fun HomeScreen(
             // Button(onClick = onNavigateToSearchResults) { // Removed old button
             // Text(text = "Go to Search Results")
             // }
+
+            if (isLoadingValue) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
     // Log.d("HomeScreen", "ViewModel Greeting: ${viewModel.getGreeting()}") // Commented out as greeting is removed
