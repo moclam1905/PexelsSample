@@ -1,6 +1,7 @@
 package com.nguyenmoclam.pexelssample
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("API_KEY_TEST", "Pexels API Key: ${BuildConfig.PEXELS_API_KEY}")
         setContent {
             PexelsSampleTheme {
                 // A surface container using the 'background' color from the theme
