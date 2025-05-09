@@ -22,8 +22,6 @@ class TempViewModel @Inject constructor(
                 val response = pexelsApiService.getCuratedPhotosTest(perPage = 1)
                 if (response.isSuccessful) {
                     Log.d(TAG, "API Call Successful! Code: ${response.code()}")
-                    Log.d(TAG, "Response Body: ${response.body().toString()}")
-                    Log.d(TAG, "Response Headers: ${response.headers()}")
                 } else {
                     Log.e(TAG, "API Call Failed! Code: ${response.code()}")
                     Log.e(TAG, "Error Body: ${response.errorBody()?.string()}")
