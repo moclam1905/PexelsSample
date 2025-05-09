@@ -1,19 +1,30 @@
 [versions]
 # Project
-agp = "8.9.1"
-kotlin = "2.0.21"
+agp = "8.8.1"
+kotlin = "2.0.0"
 minSdk = "26"
 compileSdk = "35"
 targetSdk = "35"
 
 # Jetpack Compose
-composeBom = "2024.09.00"
+composeBom = "2024.04.01"
 # composeCompiler = "2.0.21" # Compiler now aligns with Kotlin version via plugin
 
 # AndroidX
-activityCompose = "1.9.0" # A recent stable version
-coreKtx = "1.13.1" # A recent stable version
-lifecycleRuntimeKtx = "2.8.4" # A recent stable version
+activityCompose = "1.10.0" # A recent stable version
+coreKtx = "1.15.0" # A recent stable version
+lifecycleRuntimeKtx = "2.8.7" # A recent stable version
+
+# Networking
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+kotlinxSerializationJson = "1.6.3"
+retrofitKotlinxSerializationConverter = "1.0.0"
+
+# Hilt
+hilt = "2.50"
+hiltCompiler = "1.2.0"
+ksp = "2.0.0-1.0.21"
 
 # Testing
 junit = "4.13.2"
@@ -40,6 +51,18 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 
+# Networking
+squareup-retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+squareup-okhttp-core = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+squareup-okhttp-loggingInterceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+jetbrains-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+jakewharton-retrofit-kotlinxSerializationConverter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerializationConverter" }
+
+# Hilt
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hiltCompiler" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
@@ -52,4 +75,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 # New Compose Compiler plugin, version matches Kotlin
 jetbrains-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+google-dagger-hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 

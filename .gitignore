@@ -6,6 +6,7 @@ local.properties
 build/
 captures/
 .DS_Store
+.kotlin/errors
 
 # Secrets (if any, though ideally use other mechanisms)
 # secrets.properties

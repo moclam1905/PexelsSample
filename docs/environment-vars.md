@@ -16,7 +16,7 @@ The primary mechanism for injecting sensitive information like the Pexels API ke
 
 ## Required Variables
 
-| Variable Name      | Description                      | Example / Placeholder Value in `.env.nguyenmoclam` or Build Script | Required? (Yes/No) | Sensitive? (Yes/No) | How Provided to Build                                                                                                |
+| Variable Name      | Description                      | Example / Placeholder Value in `.env` or Build Script | Required? (Yes/No) | Sensitive? (Yes/No) | How Provided to Build                                                                                                |
 | :----------------- | :------------------------------- | :---------------------------------------------------------- | :----------------- | :------------------ | :------------------------------------------------------------------------------------------------------------------- |
 | `PEXELS_API_KEY`   | API Key for the Pexels API.      | `"YOUR_PEXELS_API_KEY_PLACEHOLDER"`                         | Yes                | Yes                 | Local: `gradle.properties` (root project). \<br/\> CI/CD: Secure environment variable (e.g., `PEXELS_API_KEY`). [25, 56, 71] |
 | `APP_VERSION_NAME` | Application's user-visible version | `1.0.0`                                                     | Yes                | No                  | Defined in `app/build.gradle.kts`.                                                                                   |
@@ -61,7 +61,7 @@ Ensure that if `gradle.properties` in the project root is used to store the actu
 gradle.properties
 ```
 
-It's also common to have a `gradle.properties.nguyenmoclam` file committed to the repository with placeholder values to guide developers.
+It's also common to have a `gradle.properties` file committed to the repository with placeholder values to guide developers.
 
 ## Notes
 
