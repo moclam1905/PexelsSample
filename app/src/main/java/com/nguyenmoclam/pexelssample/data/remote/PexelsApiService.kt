@@ -12,4 +12,11 @@ interface PexelsApiService {
     suspend fun getCuratedPhotosTest(
         @Query("per_page") perPage: Int = 1
     ): Response<PexelsSearchResponseDto> // Or ResponseBody as per story, JsonObject is more specific for kotlinx.serialization
+
+    @GET("search")
+    suspend fun searchPhotos(
+        @Query("query") query: String,
+        @Query("page") page: Int,
+        @Query("per_page") perPage: Int
+    ): Response<PexelsSearchResponseDto>
 } 
