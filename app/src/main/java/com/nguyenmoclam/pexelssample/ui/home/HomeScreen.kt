@@ -30,30 +30,41 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavController
+import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
+import androidx.compose.runtime.remember
+import androidx.navigation.compose.rememberNavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    // onNavigateToSearchResults: () -> Unit, // Commenting out as per story, search happens on this screen
-    // viewModel: HomeViewModel = hiltViewModel() // Will be replaced by SearchViewModel
-    searchViewModel: SearchViewModel = hiltViewModel() // Inject SearchViewModel
+    navController: NavController,
+    searchViewModel: SearchViewModel = hiltViewModel()
 ) {
-    // val searchQuery = remember { mutableStateOf("") } // Replaced by ViewModel state
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
-    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle() // Collect isLoading
+    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
+    val navigateEffect by searchViewModel.navigateToResults.collectAsStateWithLifecycle()
+
+    LaunchedEffect(navigateEffect) {
+        if (navigateEffect) {
+            navController.navigate(ScreenRoutes.SEARCH_RESULTS)
+            searchViewModel.onNavigationComplete()
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Pexels Image Search") }) // Updated title
+            TopAppBar(title = { Text("Pexels Image Search") })
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp), // Added overall padding for the content
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top // Align content to the top
+            verticalArrangement = Arrangement.Top
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -61,14 +72,14 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
-                    value = currentQuery, // Use state from ViewModel
-                    onValueChange = { searchViewModel.onQueryChanged(it) }, // Call ViewModel's method
+                    value = currentQuery,
+                    onValueChange = { searchViewModel.onQueryChanged(it) },
                     placeholder = { Text("Search for images...") },
                     label = { Text("Search") },
-                    modifier = Modifier.weight(1f), // TextField takes remaining space
+                    modifier = Modifier.weight(1f),
                     singleLine = true,
-                    enabled = !isLoadingValue, // Disable when loading
-                    leadingIcon = { // Optional leading icon as mentioned in story
+                    enabled = !isLoadingValue,
+                    leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Search,
                             contentDescription = "Search Icon"
@@ -76,9 +87,7 @@ fun HomeScreen(
                     }
                 )
                 IconButton(onClick = {
-                    // Story 2.2 will connect this to ViewModel
-                    // Log.d("HomeScreen", "Search button clicked with query: ${searchQuery.value}")
-                    searchViewModel.onSearchClicked() // Call ViewModel's method
+                    searchViewModel.onSearchClicked()
                 }, enabled = !isLoadingValue) {
                     Icon(
                         imageVector = Icons.Filled.Search,
@@ -86,13 +95,6 @@ fun HomeScreen(
                     )
                 }
             }
-
-            // Placeholder for search results or other content, can be added later
-            // Text(text = "Welcome to Home Screen!") // Removed old placeholder
-            // Text(text = viewModel.getGreeting()) // Removed old placeholder
-            // Button(onClick = onNavigateToSearchResults) { // Removed old button
-            // Text(text = "Go to Search Results")
-            // }
 
             if (isLoadingValue) {
                 Box(
@@ -104,13 +106,13 @@ fun HomeScreen(
             }
         }
     }
-    // Log.d("HomeScreen", "ViewModel Greeting: ${viewModel.getGreeting()}") // Commented out as greeting is removed
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     PexelsSampleTheme {
-        HomeScreen() // Removed onNavigateToSearchResults as it's not used now
+        val navController = rememberNavController()
+        HomeScreen(navController = navController)
     }
 }

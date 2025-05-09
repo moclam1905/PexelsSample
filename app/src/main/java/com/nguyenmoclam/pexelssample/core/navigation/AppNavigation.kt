@@ -13,17 +13,11 @@ fun AppNavigation() {
     NavHost(navController = navController, startDestination = ScreenRoutes.HOME) {
         composable(ScreenRoutes.HOME) {
             HomeScreen(
-                // onNavigateToSearchResults = { // This parameter is no longer needed
-                // navController.navigate(ScreenRoutes.SEARCH_RESULTS)
-                // }
+                navController = navController
             )
         }
         composable(ScreenRoutes.SEARCH_RESULTS) {
-            SearchResultsScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
+            SearchResultsScreen()
         }
     }
 } 

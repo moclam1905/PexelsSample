@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import android.util.Log
 import com.nguyenmoclam.pexelssample.logger.Logger
+import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.data.mappers.*
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -23,6 +25,12 @@ class SearchViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _photos = MutableStateFlow<List<Photo>>(emptyList())
+    val photos: StateFlow<List<Photo>> = _photos.asStateFlow()
+
+    private val _navigateToResults = MutableStateFlow(false)
+    val navigateToResults: StateFlow<Boolean> = _navigateToResults.asStateFlow()
+
     fun onQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery
     }
@@ -31,6 +39,8 @@ class SearchViewModel @Inject constructor(
         if (_searchQuery.value.isNotBlank()) {
             Logger.d("SearchViewModel", "Search initiated for: ${_searchQuery.value}")
             viewModelScope.launch {
+                _photos.value = emptyList()
+                _navigateToResults.value = false
                 _isLoading.value = true
                 try {
                     val response = pexelsApiService.searchPhotos(
@@ -41,6 +51,11 @@ class SearchViewModel @Inject constructor(
                     if (response.isSuccessful && response.body() != null) {
                         val responseBody = response.body()!!
                         Logger.d("SearchViewModel", "API Success: Received ${responseBody.photos.size} photos. Total results: ${responseBody.totalResults}")
+                        val mappedPhotos = responseBody.photos.map { it.toDomain() }
+                        _photos.value = mappedPhotos
+                        if (mappedPhotos.isNotEmpty()) {
+                            _navigateToResults.value = true
+                        }
                     } else {
                         Logger.e("SearchViewModel", "API Error: ${response.code()} - ${response.message()}. Body: ${response.errorBody()?.string()}")
                     }
@@ -53,5 +68,9 @@ class SearchViewModel @Inject constructor(
         } else {
             Logger.d("SearchViewModel", "Search query is empty.")
         }
+    }
+
+    fun onNavigationComplete() {
+        _navigateToResults.value = false
     }
 } 
