@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.squareup.retrofit.core)
@@ -84,6 +86,7 @@ dependencies {
     implementation(libs.squareup.okhttp.loggingInterceptor)
     implementation(libs.jetbrains.kotlinx.serialization.json)
     implementation(libs.jakewharton.retrofit.kotlinxSerializationConverter)
+    implementation(libs.coil.compose)
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)
