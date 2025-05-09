@@ -26,6 +26,7 @@ retrofitKotlinxSerializationConverter = "1.0.0"
 # Hilt
 hilt = "2.50"
 hiltCompiler = "1.2.0"
+hiltNavigationCompose = "1.2.0" # Added for Hilt Navigation Compose
 ksp = "2.0.0-1.0.21"
 
 # Testing
@@ -70,6 +71,7 @@ jakewharton-retrofit-kotlinxSerializationConverter = { group = "com.jakewharton.
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hiltCompiler" }
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" } # Added Hilt Navigation Compose
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
