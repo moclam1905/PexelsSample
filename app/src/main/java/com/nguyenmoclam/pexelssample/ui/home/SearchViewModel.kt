@@ -123,9 +123,13 @@ class SearchViewModel @Inject constructor(
                 _isLoading.value = false // Ensure isLoading is false on error
             } finally {
                 _isLoading.value = false
-                if (searchAttempted && response?.isSuccessful == true && response.body() != null) {
-                    _isResultsEmpty.value = _photos.value.isEmpty()
+                // After loading is complete, determine if results are empty.
+                // This should only be true if there was no error and the photos list is empty.
+                if (_errorState.value == null) { // No error occurred during the fetch
+                    _isResultsEmpty.value = _photos.value.isEmpty() && searchAttempted
                 } else {
+                    // If an error occurred, it's not an "empty result" scenario,
+                    // it's an "error" scenario. So, isResultsEmpty should be false.
                     _isResultsEmpty.value = false
                 }
             }

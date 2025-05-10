@@ -12,15 +12,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import com.nguyenmoclam.pexelssample.domain.model.Photo
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 
 @Composable
 fun ImageItem(
@@ -50,14 +56,6 @@ fun ImageItem(
             .build()
     }
 
-    val placeholderPainter = remember(photo.avgColor) {
-        ColorPainter(parseColor(photo.avgColor))
-    }
-    val errorPlaceholderColor = MaterialTheme.colorScheme.surfaceVariant
-    val errorPainter = remember(errorPlaceholderColor) {
-        ColorPainter(errorPlaceholderColor)
-    }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -66,21 +64,41 @@ fun ImageItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = imageRequest,
                 contentDescription = photo.alt.ifBlank { "Photo by ${photo.photographer}" },
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                placeholder = placeholderPainter,
-                error = errorPainter,
-                onLoading = { state ->
-                    Log.d("ImageItem_DEBUG", "Photo ID: ${photo.id} (AsyncImage) - State: Loading. Placeholder active.")
+                loading = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(parseColor(photo.avgColor)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp), // Adjusted size for grid item
+                            strokeWidth = 3.dp
+                        )
+                    }
                 },
-                onSuccess = { state ->
-                    Log.d("ImageItem_DEBUG", "Photo ID: ${photo.id} (AsyncImage) - State: Success. Image loaded from ${state.result.dataSource}.")
+                error = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.BrokenImage,
+                            contentDescription = "Error loading image",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(40.dp) // Adjusted size for grid item
+                        )
+                    }
                 },
-                onError = { state ->
-                    Log.e("ImageItem_DEBUG", "Photo ID: ${photo.id} (AsyncImage) - State: Error. Error: ", state.result.throwable)
+                success = {
+                    SubcomposeAsyncImageContent()
                 }
             )
         }

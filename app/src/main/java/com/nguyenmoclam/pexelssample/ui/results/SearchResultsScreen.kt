@@ -78,61 +78,70 @@ fun SearchResultsScreen(
                 .padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
-            when {
-                isLoadingValue && photoList.isEmpty() && currentError == null -> {
-                    CircularProgressIndicator()
+            // Priority 1: Initial Loading (FullScreen Loader)
+            // Shown when isLoading is true, and there are no photos or errors to display for the current attempt.
+            // ViewModel ensures photos and error are cleared before setting isLoading to true for a new search.
+            if (isLoadingValue && photoList.isEmpty() && currentError == null) {
+                CircularProgressIndicator()
+            }
+            // Priority 2: Error
+            // If there's an error, display it, regardless of other states.
+            else if (currentError != null) {
+                ErrorView(error = currentError) {
+                    searchViewModel.retryLastFailedOperation()
                 }
-                currentError != null -> {
-                    ErrorView(error = currentError) {
-                        searchViewModel.retryLastFailedOperation()
+            }
+            // Priority 3: Empty Results
+            // Shown if the search was completed successfully but yielded no results.
+            // `isEmptyResults` is true only if no error and photos list is empty after a search attempt.
+            else if (isEmptyResults) {
+                Text(
+                    text = "No images found for '$currentQuery'. Try another search.",
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+            // Priority 4: Content Available
+            // Shown if photos are available and there's no overriding loading or error state.
+            else if (photoList.isNotEmpty()) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(photoList, key = { photo -> photo.id }) { photo ->
+                        ImageItem(
+                            photo = photo,
+                            onItemClick = { selectedPhoto ->
+                                navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
+                            }
+                        )
                     }
-                }
-                isEmptyResults && photoList.isEmpty() -> {
-                    Text(
-                        text = "No images found for '$currentQuery'. Try another search.",
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-                photoList.isNotEmpty() -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        state = gridState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(photoList, key = { photo -> photo.id }) { photo ->
-                            ImageItem(
-                                photo = photo,
-                                onItemClick = { selectedPhoto ->
-                                    navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
-                                }
-                            )
-                        }
 
-                        if (isLoadingMoreValue && currentError == null) {
-                            item(span = { GridItemSpan(this.maxLineSpan) }) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp), // Padding for the loader itself
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
+                    // Pagination loader: shown only if loading more and no general error.
+                    if (isLoadingMoreValue && currentError == null) {
+                        item(span = { GridItemSpan(this.maxLineSpan) }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp), // Padding for the loader itself
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
                             }
                         }
                     }
                 }
-                // Fallback for initial state before any search or if query is cleared - might be an empty screen or a prompt.
-                // For now, if query is blank and no error/loading/results, it implies we are back to a blank state for this screen.
-                currentQuery.isBlank() && !isLoadingValue && currentError == null && photoList.isEmpty() -> {
-                    Text(
-                        text = "Search results will appear here.",
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
+            }
+            // Priority 5: Fallback / Initial Prompt (e.g., screen just opened, no search yet)
+            // This is reached if none of the above conditions are met.
+            else {
+                Text(
+                    text = "Search results will appear here.",
+                    modifier = Modifier.padding(16.dp)
+                )
             }
         }
     }
