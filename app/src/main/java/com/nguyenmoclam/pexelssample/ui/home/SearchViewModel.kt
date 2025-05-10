@@ -49,6 +49,7 @@ class SearchViewModel @Inject constructor(
     val errorState: StateFlow<UserFacingError?> = _errorState.asStateFlow()
 
     private var searchAttempted = false
+    private var lastAction: (() -> Unit)? = null // Added for retry mechanism
 
     fun onQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery
@@ -57,56 +58,67 @@ class SearchViewModel @Inject constructor(
     fun onSearchClicked() {
         if (_searchQuery.value.isNotBlank()) {
             Logger.d("SearchViewModel", "Search initiated for: ${_searchQuery.value}")
-            _errorState.value = null // Clear previous errors
-            currentPage = 1
-            _photos.value = emptyList()
-            totalResults = 0
-            _canLoadMore.value = false
-            _navigateToResults.value = false
-            _isLoadingMore.value = false
-            searchAttempted = true
-            _isResultsEmpty.value = false // Reset at the start of a new search
-
-            viewModelScope.launch {
-                _isLoading.value = true
-                var response: retrofit2.Response<PexelsSearchResponseDto>? = null
-                try {
-                    response = pexelsApiService.searchPhotos(
-                        query = _searchQuery.value,
-                        page = currentPage,
-                        perPage = ITEMS_PER_PAGE
-                    )
-                    if (response.isSuccessful && response.body() != null) {
-                        val responseBody = response.body()!!
-                        Logger.d("SearchViewModel", "API Success: Received ${responseBody.photos.size} photos. Total results: ${responseBody.totalResults}")
-                        val mappedPhotos = responseBody.photos.map { it.toDomain() }
-                        _photos.value = mappedPhotos
-                        totalResults = responseBody.totalResults
-                        _canLoadMore.value = responseBody.nextPage != null
-                        _errorState.value = null // Clear error on success
-                        _navigateToResults.value = true
-                    } else {
-                        Logger.e("SearchViewModel", "API Error: ${response.code()} - ${response.message()}. Body: ${response.errorBody()?.string()}")
-                        _errorState.value = UserFacingError(message = "Could not load images. Please try again.", isRetryable = true)
-                        _isResultsEmpty.value = false
-                        _navigateToResults.value = false
-                    }
-                } catch (e: Exception) {
-                    Logger.e("SearchViewModel", "Network or other error: ${e.message}", e)
-                    _errorState.value = UserFacingError(message = "Could not load images. Please check your connection.", isRetryable = true)
-                    _isResultsEmpty.value = false
-                    _navigateToResults.value = false
-                } finally {
-                    _isLoading.value = false
-                    if (searchAttempted && response?.isSuccessful == true && response?.body() != null) {
-                        _isResultsEmpty.value = _photos.value.isEmpty()
-                    } else {
-                        _isResultsEmpty.value = false
-                    }
-                }
-            }
+            // Store the action for potential retry
+            lastAction = { performSearchInternal() }
+            performSearchInternal()
         } else {
             Logger.d("SearchViewModel", "Search query is empty.")
+        }
+    }
+
+    private fun performSearchInternal() {
+        _errorState.value = null // Clear previous errors
+        currentPage = 1
+        _photos.value = emptyList()
+        totalResults = 0
+        _canLoadMore.value = false
+        _navigateToResults.value = false
+        _isLoadingMore.value = false
+        searchAttempted = true
+        _isResultsEmpty.value = false // Reset at the start of a new search
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            var response: retrofit2.Response<PexelsSearchResponseDto>? = null
+            try {
+                response = pexelsApiService.searchPhotos(
+                    query = _searchQuery.value,
+                    page = currentPage,
+                    perPage = ITEMS_PER_PAGE
+                )
+                if (response.isSuccessful && response.body() != null) {
+                    val responseBody = response.body()!!
+                    Logger.d("SearchViewModel", "API Success: Received ${responseBody.photos.size} photos. Total results: ${responseBody.totalResults}")
+                    val mappedPhotos = responseBody.photos.map { it.toDomain() }
+                    _photos.value = mappedPhotos
+                    totalResults = responseBody.totalResults
+                    _canLoadMore.value = responseBody.nextPage != null
+                    _errorState.value = null // Clear error on success
+                    _navigateToResults.value = true
+                } else {
+                    Logger.e("SearchViewModel", "API Error: ${response.code()} - ${response.message()}. Body: ${response.errorBody()?.string()}")
+                    _errorState.value = UserFacingError(message = "Could not load images. Please try again.", isRetryable = true)
+                    _isResultsEmpty.value = false
+                    _navigateToResults.value = false
+                }
+            } catch (e: java.io.IOException) { // Specific catch for network errors
+                Logger.e("SearchViewModel", "Network error during search: ${e.message}", e)
+                _errorState.value = UserFacingError(message = "No internet connection. Please check your connection and try again.", isRetryable = true)
+                _isResultsEmpty.value = false
+                _navigateToResults.value = true
+            } catch (e: Exception) { // General catch for other errors
+                Logger.e("SearchViewModel", "Other error during search: ${e.message}", e)
+                _errorState.value = UserFacingError(message = "An unexpected error occurred. Please try again.", isRetryable = true)
+                _isResultsEmpty.value = false
+                _navigateToResults.value = true
+            } finally {
+                _isLoading.value = false
+                if (searchAttempted && response?.isSuccessful == true && response?.body() != null) {
+                    _isResultsEmpty.value = _photos.value.isEmpty()
+                } else {
+                    _isResultsEmpty.value = false
+                }
+            }
         }
     }
 
@@ -115,6 +127,12 @@ class SearchViewModel @Inject constructor(
             Logger.d("SearchViewModel", "loadNextPage: Condition not met. isLoading: ${_isLoading.value}, isLoadingMore: ${_isLoadingMore.value}, canLoadMore: ${_canLoadMore.value}")
             return
         }
+        // Store the action for potential retry
+        lastAction = { performLoadNextPageInternal() }
+        performLoadNextPageInternal()
+    }
+
+    private fun performLoadNextPageInternal() {
         _errorState.value = null // Clear previous errors before attempting to load more
         _isLoadingMore.value = true
         Logger.d("SearchViewModel", "loadNextPage: Loading page ${currentPage + 1}")
@@ -138,9 +156,13 @@ class SearchViewModel @Inject constructor(
                     _errorState.value = UserFacingError(message = "Could not load more images. Please try again.", isRetryable = true)
                     _canLoadMore.value = false // Stop further pagination attempts on error
                 }
-            } catch (e: Exception) {
-                Logger.e("SearchViewModel", "Network or other error (Page $currentPage): ${e.message}", e)
-                _errorState.value = UserFacingError(message = "Could not load more images. Please check your connection.", isRetryable = true)
+            } catch (e: java.io.IOException) { // Specific catch for network errors
+                Logger.e("SearchViewModel", "Network error during pagination (Page $currentPage): ${e.message}", e)
+                _errorState.value = UserFacingError(message = "No internet connection. Please check your connection and try again.", isRetryable = true)
+                _canLoadMore.value = false // Stop further pagination attempts on error
+            } catch (e: Exception) { // General catch for other errors
+                Logger.e("SearchViewModel", "Other error during pagination (Page $currentPage): ${e.message}", e)
+                _errorState.value = UserFacingError(message = "An unexpected error occurred while loading more. Please try again.", isRetryable = true)
                 _canLoadMore.value = false // Stop further pagination attempts on error
             } finally {
                 _isLoadingMore.value = false
@@ -154,25 +176,9 @@ class SearchViewModel @Inject constructor(
 
     fun getPhotoById(id: Int): Photo? = _photos.value.find { it.id == id }
     
-    // Placeholder for retry logic as per story refinement.
-    // For now, SearchResultsScreen will call onSearchClicked or loadNextPage directly.
-    // This function can be expanded later if more complex retry logic is needed.
     fun retryLastFailedOperation() {
-        // Determine what failed (initial search or pagination)
-        // For now, if there's an error, and we have a search query, let's assume initial search failed.
-        // This is a simplification.
-        if (_errorState.value != null && _searchQuery.value.isNotBlank()) {
-            Logger.d("SearchViewModel", "Retrying search for: ${_searchQuery.value}")
-            onSearchClicked()
-        } else if (_errorState.value != null) {
-            // If no query, but error, maybe it was a pagination error
-            // This part needs more robust logic to know if it was pagination
-            // For now, let's try to load next page if canLoadMore was true before error
-            // Or, if photos exist, it implies it might be a pagination error.
-             if (_photos.value.isNotEmpty()) { // A simple heuristic
-                 Logger.d("SearchViewModel", "Retrying loadNextPage")
-                 loadNextPage()
-             }
-        }
+        _errorState.value = null // Clear the error before retrying
+        Logger.d("SearchViewModel", "retryLastFailedOperation: Attempting to execute last stored action.")
+        lastAction?.invoke()
     }
 } 
