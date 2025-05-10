@@ -107,8 +107,7 @@ fun SearchResultsScreen(
                                 photo = photo,
                                 onItemClick = { selectedPhoto ->
                                     navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
-                                },
-                                modifier = Modifier.padding(4.dp) // Item padding
+                                }
                             )
                         }
 

@@ -20,6 +20,7 @@ import androidx.core.graphics.toColorInt
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nguyenmoclam.pexelssample.domain.model.Photo
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun ImageItem(
@@ -52,8 +53,9 @@ fun ImageItem(
     val placeholderPainter = remember(photo.avgColor) {
         ColorPainter(parseColor(photo.avgColor))
     }
-    val errorPainter = remember {
-        ColorPainter(Color.DarkGray)
+    val errorPlaceholderColor = MaterialTheme.colorScheme.surfaceVariant
+    val errorPainter = remember(errorPlaceholderColor) {
+        ColorPainter(errorPlaceholderColor)
     }
 
     Card(
@@ -66,7 +68,7 @@ fun ImageItem(
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             AsyncImage(
                 model = imageRequest,
-                contentDescription = photo.alt,
+                contentDescription = photo.alt.ifBlank { "Photo by ${photo.photographer}" },
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
                 placeholder = placeholderPainter,

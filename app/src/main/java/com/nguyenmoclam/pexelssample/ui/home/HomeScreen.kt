@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -82,7 +83,9 @@ fun HomeScreen(
                 )
                 IconButton(onClick = {
                     searchViewModel.onSearchClicked()
-                }, enabled = !isLoadingValue) {
+                }, enabled = !isLoadingValue,
+                   modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = "Search button"

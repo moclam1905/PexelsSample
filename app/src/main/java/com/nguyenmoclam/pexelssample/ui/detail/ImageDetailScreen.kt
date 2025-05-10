@@ -88,13 +88,13 @@ fun ImageDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.DarkGray),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.BrokenImage,
                                 contentDescription = "Error loading image",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(48.dp)
                             )
                         }
@@ -112,10 +112,13 @@ fun ImageDetailScreen(
                     text = photographerText,
                     style = MaterialTheme.typography.titleMedium,
                     color = if (currentPhoto.photographerUrl.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.clickable(
-                        enabled = currentPhoto.photographerUrl.isNotBlank(),
-                        onClick = { uriHandler.openUri(currentPhoto.photographerUrl) }
-                    )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            enabled = currentPhoto.photographerUrl.isNotBlank(),
+                            onClick = { uriHandler.openUri(currentPhoto.photographerUrl) }
+                        )
+                        .padding(vertical = 12.dp)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
