@@ -28,21 +28,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nguyenmoclam.pexelssample.domain.model.Photo
 import com.nguyenmoclam.pexelssample.domain.model.PhotoSrc
+import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
 import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
+import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchResultsScreen(
-    viewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    navController: NavController
 ) {
-    val photoList by viewModel.photos.collectAsStateWithLifecycle()
-    val isLoadingValue by viewModel.isLoading.collectAsStateWithLifecycle() // Initial load
-    val isLoadingMoreValue by viewModel.isLoadingMore.collectAsStateWithLifecycle() // Pagination load
-    val canLoadMoreValue by viewModel.canLoadMore.collectAsStateWithLifecycle()
-    val isEmptyResults by viewModel.isResultsEmpty.collectAsStateWithLifecycle()
-    val currentQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val photoList by searchViewModel.photos.collectAsStateWithLifecycle()
+    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle() // Initial load
+    val isLoadingMoreValue by searchViewModel.isLoadingMore.collectAsStateWithLifecycle() // Pagination load
+    val canLoadMoreValue by searchViewModel.canLoadMore.collectAsStateWithLifecycle()
+    val isEmptyResults by searchViewModel.isResultsEmpty.collectAsStateWithLifecycle()
+    val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
 
     val gridState = rememberLazyGridState()
 
@@ -59,7 +62,7 @@ fun SearchResultsScreen(
 
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
-            viewModel.loadNextPage()
+            searchViewModel.loadNextPage()
         }
     }
 
@@ -103,7 +106,9 @@ fun SearchResultsScreen(
                         photo = photo,
                         onItemClick = { selectedPhoto ->
                             // Handle click in Story 4.1
-                        }
+                            navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
+                        },
+                        modifier = Modifier.padding(4.dp)
                     )
                 }
 

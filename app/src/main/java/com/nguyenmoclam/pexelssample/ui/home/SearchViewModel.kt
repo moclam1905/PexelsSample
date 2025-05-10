@@ -146,4 +146,6 @@ class SearchViewModel @Inject constructor(
     fun onNavigationComplete() {
         _navigateToResults.value = false
     }
+
+    fun getPhotoById(id: Int): Photo? = _photos.value.find { it.id == id }
 } 

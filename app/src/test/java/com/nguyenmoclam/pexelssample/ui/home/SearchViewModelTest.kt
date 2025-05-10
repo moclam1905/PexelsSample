@@ -8,6 +8,8 @@ import com.nguyenmoclam.pexelssample.data.remote.PexelsApiService
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsPhotoDto
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsPhotoSrcDto
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsSearchResponseDto
+import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.domain.model.PhotoSrc
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -32,6 +34,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import retrofit2.Response
 import java.io.IOException
+import java.lang.reflect.Field
 
 @ExperimentalCoroutinesApi
 class MainCoroutineRule(
@@ -66,6 +69,9 @@ class SearchViewModelTest {
     private val mockPhotoDto1 = PexelsPhotoDto(id = 1, width = 100, height = 100, url = "url1", photographer = "Photographer 1", photographerUrl = "", photographerId = 1, avgColor = "", src = mockPhotoSrcDto, liked = false, alt = "Photo 1")
     private val mockPhotoDto2 = PexelsPhotoDto(id = 2, width = 100, height = 100, url = "url2", photographer = "Photographer 2", photographerUrl = "", photographerId = 2, avgColor = "", src = mockPhotoSrcDto, liked = false, alt = "Photo 2")
     private val mockPhotoDto3 = PexelsPhotoDto(id = 3, width = 100, height = 100, url = "url3", photographer = "Photographer 3", photographerUrl = "", photographerId = 3, avgColor = "", src = mockPhotoSrcDto, liked = false, alt = "Photo 3")
+
+    private val domainPhoto1 = mockPhotoDto1.toDomain()
+    private val domainPhoto2 = mockPhotoDto2.toDomain()
 
     @Before
     fun setUp() {
@@ -364,6 +370,47 @@ class SearchViewModelTest {
                 cancelAndConsumeRemainingEvents()
             }
             cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `getPhotoById returns correct photo when photo exists in list`() {
+        val photosList = listOf(domainPhoto1, domainPhoto2)
+        setPhotosInViewModel(photosList)
+
+        val result = viewModel.getPhotoById(domainPhoto1.id)
+
+        assertThat(result).isEqualTo(domainPhoto1)
+    }
+
+    @Test
+    fun `getPhotoById returns null when photo does not exist in list`() {
+        val photosList = listOf(domainPhoto1, domainPhoto2)
+        setPhotosInViewModel(photosList)
+
+        val result = viewModel.getPhotoById(300)
+
+        assertThat(result).isNull()
+    }
+
+    @Test
+    fun `getPhotoById returns null when photo list is empty`() {
+        setPhotosInViewModel(emptyList())
+
+        val result = viewModel.getPhotoById(domainPhoto1.id)
+
+        assertThat(result).isNull()
+    }
+
+    private fun setPhotosInViewModel(photos: List<Photo>) {
+        try {
+            val field: Field = SearchViewModel::class.java.getDeclaredField("_photos")
+            field.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val mutableStateFlow = field.get(viewModel) as MutableStateFlow<List<Photo>>
+            mutableStateFlow.value = photos
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to set _photos field in SearchViewModel via reflection", e)
         }
     }
 } 
