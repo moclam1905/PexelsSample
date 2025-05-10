@@ -41,6 +41,8 @@ fun SearchResultsScreen(
     val isLoadingValue by viewModel.isLoading.collectAsStateWithLifecycle() // Initial load
     val isLoadingMoreValue by viewModel.isLoadingMore.collectAsStateWithLifecycle() // Pagination load
     val canLoadMoreValue by viewModel.canLoadMore.collectAsStateWithLifecycle()
+    val isEmptyResults by viewModel.isResultsEmpty.collectAsStateWithLifecycle()
+    val currentQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     val gridState = rememberLazyGridState()
 
@@ -63,20 +65,10 @@ fun SearchResultsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Search Results") })
+            TopAppBar(title = { Text(text = "Search Results for $currentQuery") })
         }
     ) { paddingValues ->
-        if (photoList.isEmpty() && !isLoadingValue) { // Also check isLoadingValue for initial state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No results found, or search not yet performed.")
-            }
-        } else if (isLoadingValue && photoList.isEmpty()) { // Show loading for initial search
+        if (isLoadingValue && photoList.isEmpty()) { // Show loading for initial search
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -85,8 +77,17 @@ fun SearchResultsScreen(
             ) {
                 CircularProgressIndicator()
             }
-        }
-        else {
+        } else if (isEmptyResults) { // Display "No images found for '[currentQuery]'. Try another search." Text
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp), // Added padding for the message
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "No images found for '$currentQuery'. Try another search.")
+            }
+        } else if (photoList.isNotEmpty()) { // Display LazyVerticalGrid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 state = gridState, // Pass the gridState

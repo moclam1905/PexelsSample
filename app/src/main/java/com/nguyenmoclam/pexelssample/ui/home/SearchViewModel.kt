@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nguyenmoclam.pexelssample.data.mappers.toDomain
 import com.nguyenmoclam.pexelssample.data.remote.PexelsApiService
+import com.nguyenmoclam.pexelssample.data.remote.model.PexelsSearchResponseDto
 import com.nguyenmoclam.pexelssample.domain.model.Photo
 import com.nguyenmoclam.pexelssample.logger.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,6 +41,11 @@ class SearchViewModel @Inject constructor(
     private val _canLoadMore = MutableStateFlow(false)
     val canLoadMore: StateFlow<Boolean> = _canLoadMore.asStateFlow()
 
+    private val _isResultsEmpty = MutableStateFlow(false)
+    val isResultsEmpty: StateFlow<Boolean> = _isResultsEmpty.asStateFlow()
+
+    private var searchAttempted = false
+
     fun onQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery
     }
@@ -53,11 +59,14 @@ class SearchViewModel @Inject constructor(
             _canLoadMore.value = false
             _navigateToResults.value = false
             _isLoadingMore.value = false
+            searchAttempted = true
+            _isResultsEmpty.value = false // Reset at the start of a new search
 
             viewModelScope.launch {
                 _isLoading.value = true
+                var response: retrofit2.Response<PexelsSearchResponseDto>? = null
                 try {
-                    val response = pexelsApiService.searchPhotos(
+                    response = pexelsApiService.searchPhotos(
                         query = _searchQuery.value,
                         page = currentPage,
                         perPage = ITEMS_PER_PAGE
@@ -69,16 +78,29 @@ class SearchViewModel @Inject constructor(
                         _photos.value = mappedPhotos
                         totalResults = responseBody.totalResults
                         _canLoadMore.value = responseBody.nextPage != null
-                        if (mappedPhotos.isNotEmpty()) {
-                            _navigateToResults.value = true
-                        }
+
+                        // Navigate to results screen if API call was successful.
+                        // SearchResultsScreen will then use isResultsEmpty and photos to display the correct UI.
+                        _navigateToResults.value = true
                     } else {
                         Logger.e("SearchViewModel", "API Error: ${response.code()} - ${response.message()}. Body: ${response.errorBody()?.string()}")
+                        _isResultsEmpty.value = false // Error state takes precedence
+                        _navigateToResults.value = false // Do not navigate on API error
                     }
                 } catch (e: Exception) {
                     Logger.e("SearchViewModel", "Network or other error: ${e.message}", e)
+                    _isResultsEmpty.value = false // Error state takes precedence
+                    _navigateToResults.value = false // Do not navigate on network error
                 } finally {
                     _isLoading.value = false
+                    // Set _isResultsEmpty based on the final state of photos
+                    // ONLY if a search was attempted and the API call itself was successful with a body.
+                    if (searchAttempted && response?.isSuccessful == true && response?.body() != null) {
+                        _isResultsEmpty.value = _photos.value.isEmpty()
+                    } else {
+                        // If search wasn't attempted, or API failed/had no body, it's not an "empty result" state.
+                        _isResultsEmpty.value = false
+                    }
                 }
             }
         } else {
