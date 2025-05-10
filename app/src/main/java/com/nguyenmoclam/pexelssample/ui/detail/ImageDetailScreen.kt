@@ -1,6 +1,7 @@
 package com.nguyenmoclam.pexelssample.ui.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -43,7 +45,7 @@ fun ImageDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(photo?.photographer?.let { "Photo by $it" } ?: "Detail") },
+                title = { Text(photo?.photographer?.let { "Photo by $it" } ?: "Image Detail") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -55,12 +57,13 @@ fun ImageDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues) // Apply padding from Scaffold
-                .padding(16.dp) // Apply additional overall padding
+                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
+                .padding(16.dp) // Content padding
         ) {
             if (photo != null) {
-                val currentPhoto = photo!! // Safe due to the null check
+                val currentPhoto = photo!!
+                val uriHandler = LocalUriHandler.current
 
                 // Image Placeholder Box
                 val aspectRatio = if (currentPhoto.height > 0) currentPhoto.width.toFloat() / currentPhoto.height.toFloat() else 1f
@@ -97,16 +100,22 @@ fun ImageDetailScreen(
                         }
                     },
                     success = {
-                        SubcomposeAsyncImageContent() // This renders the actual image
+                        SubcomposeAsyncImageContent()
                     }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Photographer Name
+                // Photographer Name - Clickable
+                val photographerText = "Photo by: ${currentPhoto.photographer}"
                 Text(
-                    text = "Photographer: ${currentPhoto.photographer}",
-                    style = MaterialTheme.typography.titleMedium
+                    text = photographerText,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (currentPhoto.photographerUrl.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.clickable(
+                        enabled = currentPhoto.photographerUrl.isNotBlank(),
+                        onClick = { uriHandler.openUri(currentPhoto.photographerUrl) }
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -117,12 +126,15 @@ fun ImageDetailScreen(
                         text = "Description: ${currentPhoto.alt}",
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    Spacer(modifier = Modifier.height(16.dp)) // Add spacer after description if present
                 }
+
             } else {
-                // Fallback content if photo is null (e.g., loading indicator or error message)
-                // For this story, we'll keep it simple, but a Box with Alignment.Center could be used.
-                Box(modifier = Modifier.fillMaxSize()) { // Occupy available space
-                     Text("Loading photo details or photo not found (ID: $photoId)...")
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Loading photo details or photo not found (ID: $photoId)...")
                 }
             }
         }
