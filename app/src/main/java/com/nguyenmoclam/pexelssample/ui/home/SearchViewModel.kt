@@ -97,23 +97,33 @@ class SearchViewModel @Inject constructor(
                     _navigateToResults.value = true
                 } else {
                     Logger.e("SearchViewModel", "API Error: ${response.code()} - ${response.message()}. Body: ${response.errorBody()?.string()}")
-                    _errorState.value = UserFacingError(message = "Could not load images. Please try again.", isRetryable = true)
+                    // Enhanced error handling based on HTTP status codes
+                    _errorState.value = when (response.code()) {
+                        401, 403 -> UserFacingError(message = "Authentication error. Please check configuration.", isRetryable = false)
+                        429 -> UserFacingError(message = "Too many requests. Please try again in an hour.", isRetryable = false)
+                        in 500..599 -> UserFacingError(message = "Pexels.com seems to be unavailable. Please try again later.", isRetryable = true)
+                        in 400..499 -> UserFacingError(message = "Invalid request (Error ${response.code()}). Please try modifying your search.", isRetryable = true)
+                        else -> UserFacingError(message = "An unknown error occurred (Error ${response.code()}). Please try again.", isRetryable = true)
+                    }
                     _isResultsEmpty.value = false
-                    _navigateToResults.value = false
+                    _navigateToResults.value = true
+                    _isLoading.value = false // Ensure isLoading is false on error
                 }
             } catch (e: java.io.IOException) { // Specific catch for network errors
                 Logger.e("SearchViewModel", "Network error during search: ${e.message}", e)
                 _errorState.value = UserFacingError(message = "No internet connection. Please check your connection and try again.", isRetryable = true)
                 _isResultsEmpty.value = false
                 _navigateToResults.value = true
+                _isLoading.value = false // Ensure isLoading is false on error
             } catch (e: Exception) { // General catch for other errors
                 Logger.e("SearchViewModel", "Other error during search: ${e.message}", e)
-                _errorState.value = UserFacingError(message = "An unexpected error occurred. Please try again.", isRetryable = true)
+                _errorState.value = UserFacingError(message = "An unexpected error occurred: ${e.localizedMessage ?: "Unknown"}", isRetryable = true)
                 _isResultsEmpty.value = false
                 _navigateToResults.value = true
+                _isLoading.value = false // Ensure isLoading is false on error
             } finally {
                 _isLoading.value = false
-                if (searchAttempted && response?.isSuccessful == true && response?.body() != null) {
+                if (searchAttempted && response?.isSuccessful == true && response.body() != null) {
                     _isResultsEmpty.value = _photos.value.isEmpty()
                 } else {
                     _isResultsEmpty.value = false
@@ -153,17 +163,27 @@ class SearchViewModel @Inject constructor(
                     _errorState.value = null // Clear error on success
                 } else {
                     Logger.e("SearchViewModel", "API Error (Page $currentPage): ${response.code()} - ${response.message()}. Body: ${response.errorBody()?.string()}")
-                    _errorState.value = UserFacingError(message = "Could not load more images. Please try again.", isRetryable = true)
+                    // Enhanced error handling based on HTTP status codes
+                    _errorState.value = when (response.code()) {
+                        401, 403 -> UserFacingError(message = "Authentication error. Please check configuration.", isRetryable = false)
+                        429 -> UserFacingError(message = "Too many requests. Please try again in an hour.", isRetryable = false)
+                        in 500..599 -> UserFacingError(message = "Pexels.com seems to be unavailable. Please try again later.", isRetryable = true)
+                        in 400..499 -> UserFacingError(message = "Invalid request (Error ${response.code()}). Please try modifying your search.", isRetryable = true)
+                        else -> UserFacingError(message = "An unknown error occurred (Error ${response.code()}). Please try again.", isRetryable = true)
+                    }
                     _canLoadMore.value = false // Stop further pagination attempts on error
+                    _isLoadingMore.value = false // Ensure isLoadingMore is false on error
                 }
             } catch (e: java.io.IOException) { // Specific catch for network errors
                 Logger.e("SearchViewModel", "Network error during pagination (Page $currentPage): ${e.message}", e)
                 _errorState.value = UserFacingError(message = "No internet connection. Please check your connection and try again.", isRetryable = true)
                 _canLoadMore.value = false // Stop further pagination attempts on error
+                _isLoadingMore.value = false // Ensure isLoadingMore is false on error
             } catch (e: Exception) { // General catch for other errors
                 Logger.e("SearchViewModel", "Other error during pagination (Page $currentPage): ${e.message}", e)
-                _errorState.value = UserFacingError(message = "An unexpected error occurred while loading more. Please try again.", isRetryable = true)
+                _errorState.value = UserFacingError(message = "An unexpected error occurred: ${e.localizedMessage ?: "Unknown"}", isRetryable = true)
                 _canLoadMore.value = false // Stop further pagination attempts on error
+                _isLoadingMore.value = false // Ensure isLoadingMore is false on error
             } finally {
                 _isLoadingMore.value = false
             }
