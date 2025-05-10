@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,10 +17,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.ui.common.parseColor
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,13 +64,42 @@ fun ImageDetailScreen(
 
                 // Image Placeholder Box
                 val aspectRatio = if (currentPhoto.height > 0) currentPhoto.width.toFloat() / currentPhoto.height.toFloat() else 1f
-                Box(
+
+                SubcomposeAsyncImage(
+                    model = currentPhoto.src.large2x,
+                    contentDescription = currentPhoto.alt.ifBlank { "Full image by ${currentPhoto.photographer}" },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
-                        .background(Color.Gray) // Temporary background
+                        .aspectRatio(aspectRatio.coerceIn(0.5f, 2f)),
+                    contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(parseColor(currentPhoto.avgColor))
+                        ) {
+                             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        }
+                    },
+                    error = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.DarkGray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.BrokenImage,
+                                contentDescription = "Error loading image",
+                                tint = Color.White,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                    },
+                    success = {
+                        SubcomposeAsyncImageContent() // This renders the actual image
+                    }
                 )
-                // Content for the image will be added in Story 4.3 (e.g., AsyncImage)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
