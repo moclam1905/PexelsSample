@@ -2,17 +2,16 @@ package com.nguyenmoclam.pexelssample.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nguyenmoclam.pexelssample.data.mappers.toDomain
 import com.nguyenmoclam.pexelssample.data.remote.PexelsApiService
+import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.logger.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import android.util.Log
-import com.nguyenmoclam.pexelssample.logger.Logger
-import com.nguyenmoclam.pexelssample.domain.model.Photo
-import com.nguyenmoclam.pexelssample.data.mappers.*
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -26,6 +25,9 @@ class SearchViewModel @Inject constructor(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
 
     private val _photos = MutableStateFlow<List<Photo>>(emptyList())
     val photos: StateFlow<List<Photo>> = _photos.asStateFlow()
@@ -50,6 +52,7 @@ class SearchViewModel @Inject constructor(
             totalResults = 0
             _canLoadMore.value = false
             _navigateToResults.value = false
+            _isLoadingMore.value = false
 
             viewModelScope.launch {
                 _isLoading.value = true
@@ -84,14 +87,14 @@ class SearchViewModel @Inject constructor(
     }
 
     fun loadNextPage() {
-        if (_isLoading.value || !_canLoadMore.value) {
-            Logger.d("SearchViewModel", "loadNextPage: Condition not met. isLoading: ${_isLoading.value}, canLoadMore: ${_canLoadMore.value}")
+        if (_isLoading.value || _isLoadingMore.value || !_canLoadMore.value) {
+            Logger.d("SearchViewModel", "loadNextPage: Condition not met. isLoading: ${_isLoading.value}, isLoadingMore: ${_isLoadingMore.value}, canLoadMore: ${_canLoadMore.value}")
             return
         }
 
+        _isLoadingMore.value = true
         Logger.d("SearchViewModel", "loadNextPage: Loading page ${currentPage + 1}")
         viewModelScope.launch {
-            _isLoading.value = true
             currentPage++
             try {
                 val response = pexelsApiService.searchPhotos(
@@ -113,7 +116,7 @@ class SearchViewModel @Inject constructor(
                 Logger.e("SearchViewModel", "Network or other error (Page $currentPage): ${e.message}", e)
                 _canLoadMore.value = false
             } finally {
-                _isLoading.value = false
+                _isLoadingMore.value = false
             }
         }
     }

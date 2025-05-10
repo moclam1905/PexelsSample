@@ -4,16 +4,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,13 +38,35 @@ fun SearchResultsScreen(
     viewModel: SearchViewModel
 ) {
     val photoList by viewModel.photos.collectAsStateWithLifecycle()
+    val isLoadingValue by viewModel.isLoading.collectAsStateWithLifecycle() // Initial load
+    val isLoadingMoreValue by viewModel.isLoadingMore.collectAsStateWithLifecycle() // Pagination load
+    val canLoadMoreValue by viewModel.canLoadMore.collectAsStateWithLifecycle()
+
+    val gridState = rememberLazyGridState()
+
+    // Scroll detection logic
+    val buffer = 3 // Number of items from end to trigger load
+    val shouldLoadMore by remember(photoList.size, canLoadMoreValue, isLoadingValue, isLoadingMoreValue) {
+        derivedStateOf {
+            val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+            lastVisibleItem != null && photoList.isNotEmpty() && // Ensure photoList is not empty
+            lastVisibleItem.index >= photoList.size - 1 - buffer &&
+            canLoadMoreValue && !isLoadingValue && !isLoadingMoreValue
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            viewModel.loadNextPage()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Search Results") })
         }
     ) { paddingValues ->
-        if (photoList.isEmpty()) {
+        if (photoList.isEmpty() && !isLoadingValue) { // Also check isLoadingValue for initial state
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -47,9 +76,20 @@ fun SearchResultsScreen(
             ) {
                 Text("No results found, or search not yet performed.")
             }
-        } else {
+        } else if (isLoadingValue && photoList.isEmpty()) { // Show loading for initial search
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
+                state = gridState, // Pass the gridState
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
@@ -64,6 +104,19 @@ fun SearchResultsScreen(
                             // Handle click in Story 4.1
                         }
                     )
+                }
+
+                if (isLoadingMoreValue && photoList.isNotEmpty()) {
+                    item(span = { GridItemSpan(this.maxLineSpan) }) { // Span across all columns
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
             }
         }
