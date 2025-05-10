@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nguyenmoclam.pexelssample.domain.model.Photo
 import com.nguyenmoclam.pexelssample.domain.model.PhotoSrc
 import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
+import com.nguyenmoclam.pexelssample.ui.common.ErrorView
 import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
@@ -41,22 +42,22 @@ fun SearchResultsScreen(
     navController: NavController
 ) {
     val photoList by searchViewModel.photos.collectAsStateWithLifecycle()
-    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle() // Initial load
-    val isLoadingMoreValue by searchViewModel.isLoadingMore.collectAsStateWithLifecycle() // Pagination load
+    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
+    val isLoadingMoreValue by searchViewModel.isLoadingMore.collectAsStateWithLifecycle()
     val canLoadMoreValue by searchViewModel.canLoadMore.collectAsStateWithLifecycle()
     val isEmptyResults by searchViewModel.isResultsEmpty.collectAsStateWithLifecycle()
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
+    val currentError by searchViewModel.errorState.collectAsStateWithLifecycle()
 
     val gridState = rememberLazyGridState()
 
-    // Scroll detection logic
-    val buffer = 3 // Number of items from end to trigger load
-    val shouldLoadMore by remember(photoList.size, canLoadMoreValue, isLoadingValue, isLoadingMoreValue) {
+    val buffer = 3
+    val shouldLoadMore by remember(photoList.size, canLoadMoreValue, isLoadingValue, isLoadingMoreValue, currentError) {
         derivedStateOf {
             val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
-            lastVisibleItem != null && photoList.isNotEmpty() && // Ensure photoList is not empty
+            lastVisibleItem != null && photoList.isNotEmpty() &&
             lastVisibleItem.index >= photoList.size - 1 - buffer &&
-            canLoadMoreValue && !isLoadingValue && !isLoadingMoreValue
+            canLoadMoreValue && !isLoadingValue && !isLoadingMoreValue && currentError == null // Do not load more if there's an error
         }
     }
 
@@ -68,61 +69,70 @@ fun SearchResultsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = "Search Results for $currentQuery") })
+            TopAppBar(title = { Text(text = if (currentQuery.isNotBlank()) "Results for '$currentQuery'" else "Search Results") })
         }
     ) { paddingValues ->
-        if (isLoadingValue && photoList.isEmpty()) { // Show loading for initial search
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (isEmptyResults) { // Display "No images found for '[currentQuery]'. Try another search." Text
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp), // Added padding for the message
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "No images found for '$currentQuery'. Try another search.")
-            }
-        } else if (photoList.isNotEmpty()) { // Display LazyVerticalGrid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                state = gridState, // Pass the gridState
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(photoList, key = { photo -> photo.id }) { photo ->
-                    ImageItem(
-                        photo = photo,
-                        onItemClick = { selectedPhoto ->
-                            // Handle click in Story 4.1
-                            navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
-                        },
-                        modifier = Modifier.padding(4.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isLoadingValue && photoList.isEmpty() && currentError == null -> {
+                    CircularProgressIndicator()
+                }
+                currentError != null -> {
+                    ErrorView(error = currentError) {
+                        searchViewModel.retryLastFailedOperation()
+                    }
+                }
+                isEmptyResults && photoList.isEmpty() -> {
+                    Text(
+                        text = "No images found for '$currentQuery'. Try another search.",
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
+                photoList.isNotEmpty() -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        state = gridState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(photoList, key = { photo -> photo.id }) { photo ->
+                            ImageItem(
+                                photo = photo,
+                                onItemClick = { selectedPhoto ->
+                                    navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
+                                },
+                                modifier = Modifier.padding(4.dp) // Item padding
+                            )
+                        }
 
-                if (isLoadingMoreValue && photoList.isNotEmpty()) {
-                    item(span = { GridItemSpan(this.maxLineSpan) }) { // Span across all columns
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                        if (isLoadingMoreValue && currentError == null) {
+                            item(span = { GridItemSpan(this.maxLineSpan) }) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp), // Padding for the loader itself
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
                         }
                     }
+                }
+                // Fallback for initial state before any search or if query is cleared - might be an empty screen or a prompt.
+                // For now, if query is blank and no error/loading/results, it implies we are back to a blank state for this screen.
+                currentQuery.isBlank() && !isLoadingValue && currentError == null && photoList.isEmpty() -> {
+                    Text(
+                        text = "Search results will appear here.",
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
         }
@@ -131,7 +141,38 @@ fun SearchResultsScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun SearchResultsScreenPreview() {
+fun SearchResultsScreenPreview_Empty() {
+    PexelsSampleTheme {
+        // Mock ViewModel or provide dummy data for preview
+        // This preview shows an empty state
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+            Text("No images found for 'Preview Query'. Try another search.")
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SearchResultsScreenPreview_Loading() {
+    PexelsSampleTheme {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SearchResultsScreenPreview_Error() {
+    PexelsSampleTheme {
+        ErrorView(error = com.nguyenmoclam.pexelssample.ui.model.UserFacingError("Preview Error: Something went wrong", true)) {}
+    }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun SearchResultsScreenPreview_WithData() {
     PexelsSampleTheme {
         val samplePhotoSrc = PhotoSrc(
             original = "https://via.placeholder.com/1500",
