@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.model.UserFacingError
 
@@ -94,11 +96,16 @@ fun SearchResultsListComposable(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(photos, key = { photo -> photo.id }) { photo ->
-                        PhotoGridItem(photo = photo, onClick = { onPhotoClick(photo) })
+                        ImageItem(photo = photo, onItemClick = { onPhotoClick(photo) })
                     }
                     if (isLoadingMore) {
-                        item { // Span across all columns for the loading indicator
-                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        item(span = { GridItemSpan(this.maxLineSpan) }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp), // Padding for the loader itself
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CircularProgressIndicator()
                             }
                         }

@@ -1,13 +1,16 @@
 package com.nguyenmoclam.pexelssample.ui.detail
 
-import android.content.res.Configuration
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,13 +38,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -150,8 +154,7 @@ fun ImageDetailPaneComposable(
         if (photoFromVM != null) {
             val currentPhoto = photoFromVM!!
             val uriHandler = LocalUriHandler.current
-            val configuration = LocalConfiguration.current
-            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val viewConf = LocalViewConfiguration.current
             
             // Determine aspect ratio for the image container
             val imageContainerAspectRatio = if (currentPhoto.height > 0) {
@@ -201,7 +204,7 @@ fun ImageDetailPaneComposable(
                                         targetOffsetXValue = 0f
                                         targetOffsetYValue = 0f
                                     }
-                                    
+
                                     val effectiveContentWidth = contentRenderedWidth * targetScaleValue
                                     val effectiveContentHeight = contentRenderedHeight * targetScaleValue
                                     val maxPanX = if (effectiveContentWidth > viewWidth) (effectiveContentWidth - viewWidth) / 2f else 0f
@@ -231,56 +234,82 @@ fun ImageDetailPaneComposable(
                             translationY = offsetYAnimatable.value
                         )
                         .pointerInput(imageDetailViewModel, contentRenderedWidth, contentRenderedHeight, layoutSize) {
-                            detectTransformGestures { centroid, pan, zoom, rotation ->
-                                if (layoutSize == IntSize.Zero || contentRenderedWidth == 0f || contentRenderedHeight == 0f) {
-                                    return@detectTransformGestures
-                                }
+                            val touchSlop = viewConf.touchSlop
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                do {
+                                    val event = awaitPointerEvent()
 
-                                val viewWidth = layoutSize.width.toFloat()
-                                val viewHeight = layoutSize.height.toFloat()
-                                val minScale = imageDetailViewModel.minScale
-                                val maxScale = imageDetailViewModel.maxScale
+                                    val zoomChange = event.calculateZoom()
+                                    val panChange = event.calculatePan()
+                                    val centroid = event.calculateCentroid(useCurrent = true)
 
-                                val currentStableScale = imageDetailViewModel.scale.value
-                                val currentStableOffsetX = imageDetailViewModel.offsetX.value
-                                val currentStableOffsetY = imageDetailViewModel.offsetY.value
+                                    val zoomMoved = abs(zoomChange - 1f) > 0.001f
+                                    val panMoved  = panChange.getDistance() > touchSlop
+                                    val hasMovement = zoomMoved || panMoved
 
-                                val newScale = (currentStableScale * zoom).coerceIn(minScale, maxScale)
+                                    val minScale = imageDetailViewModel.minScale
+                                    val shouldConsume =
+                                          event.changes.size > 1 ||
+                                                  (imageDetailViewModel.scale.value > minScale + 0.01f && hasMovement)
+                                    if (shouldConsume) {
 
-                                val oldScaleForFormula = currentStableScale
+                                        val viewW = layoutSize.width.toFloat()
+                                        val viewH = layoutSize.height.toFloat()
+                                        val maxScale = imageDetailViewModel.maxScale
 
-                                var newOffsetX = currentStableOffsetX * (newScale / oldScaleForFormula) - (centroid.x - viewWidth / 2f) * (newScale / oldScaleForFormula - 1) + pan.x
-                                var newOffsetY = currentStableOffsetY * (newScale / oldScaleForFormula) - (centroid.y - viewHeight / 2f) * (newScale / oldScaleForFormula - 1) + pan.y
+                                        val currentScale    = imageDetailViewModel.scale.value
+                                        val currentOffsetX  = imageDetailViewModel.offsetX.value
+                                        val currentOffsetY  = imageDetailViewModel.offsetY.value
 
-                                if (abs(newScale - minScale) < 0.01f) {
-                                    newOffsetX = 0f
-                                    newOffsetY = 0f
-                                } else {
-                                    val scaledContentActualWidth = contentRenderedWidth * newScale
-                                    val scaledContentActualHeight = contentRenderedHeight * newScale
+                                        val pivotX = if (centroid.isSpecified) centroid.x else viewW / 2f
+                                        val pivotY = if (centroid.isSpecified) centroid.y else viewH / 2f
 
-                                    val maxPanX = if (scaledContentActualWidth > viewWidth) (scaledContentActualWidth - viewWidth) / 2f else 0f
-                                    val maxPanY = if (scaledContentActualHeight > viewHeight) (scaledContentActualHeight - viewHeight) / 2f else 0f
+                                        val newScale = (currentScale * zoomChange).coerceIn(minScale, maxScale)
 
-                                    newOffsetX = newOffsetX.coerceIn(-maxPanX, maxPanX)
-                                    newOffsetY = newOffsetY.coerceIn(-maxPanY, maxPanY)
+                                        val oldScaleForFormula = currentScale
+                                        var newOffsetX = currentOffsetX * (newScale / oldScaleForFormula) -
+                                                (pivotX - viewW / 2f) * (newScale / oldScaleForFormula - 1) +
+                                                panChange.x
+                                        var newOffsetY = currentOffsetY * (newScale / oldScaleForFormula) -
+                                                (pivotY - viewH / 2f) * (newScale / oldScaleForFormula - 1) +
+                                                panChange.y
 
-                                    if (scaledContentActualWidth <= viewWidth) newOffsetX = 0f
-                                    if (scaledContentActualHeight <= viewHeight) newOffsetY = 0f
-                                }
+                                        if (abs(newScale - minScale) < 0.01f) {
+                                            newOffsetX = 0f
+                                            newOffsetY = 0f
+                                        } else {
+                                            val scaledContentW = contentRenderedWidth * newScale
+                                            val scaledContentH = contentRenderedHeight * newScale
+                                            val maxPanX = if (scaledContentW > viewW) (scaledContentW - viewW) / 2f else 0f
+                                            val maxPanY = if (scaledContentH > viewH) (scaledContentH - viewH) / 2f else 0f
+                                            newOffsetX = newOffsetX.coerceIn(-maxPanX, maxPanX)
+                                            newOffsetY = newOffsetY.coerceIn(-maxPanY, maxPanY)
+                                            if (scaledContentW <= viewW) newOffsetX = 0f
+                                            if (scaledContentH <= viewH) newOffsetY = 0f
+                                        }
 
-                                imageDetailViewModel.updateTransform(newScale, newOffsetX, newOffsetY)
 
-                                coroutineScope.launch {
-                                    scaleAnimatable.snapTo(newScale)
-                                    offsetXAnimatable.snapTo(newOffsetX)
-                                    offsetYAnimatable.snapTo(newOffsetY)
-                                }
+                                        imageDetailViewModel.updateTransform(newScale, newOffsetX, newOffsetY)
+
+                                        coroutineScope.launch {
+                                            scaleAnimatable.snapTo(newScale)
+                                            offsetXAnimatable.snapTo(newOffsetX)
+                                            offsetYAnimatable.snapTo(newOffsetY)
+                                        }
+
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                } while (event.changes.any { it.pressed })
                             }
                         },
                     loading = {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(parseColor(currentPhoto.avgColor))
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                         }
                     },
                     error = {
