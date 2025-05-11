@@ -1,6 +1,7 @@
 package com.nguyenmoclam.pexelssample.core.navigation
 
 import androidx.compose.material3.Text
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
@@ -14,14 +15,16 @@ import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.results.SearchResultsScreen
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(windowSizeClass: WindowSizeClass) {
     val navController = rememberNavController()
     val searchViewModel: SearchViewModel = hiltViewModel()
 
     NavHost(navController = navController, startDestination = ScreenRoutes.HOME) {
         composable(ScreenRoutes.HOME) {
             HomeScreen(
-                navController = navController, searchViewModel
+                navController = navController, 
+                searchViewModel = searchViewModel,
+                windowSizeClass = windowSizeClass
             )
         }
         composable(ScreenRoutes.SEARCH_RESULTS) {

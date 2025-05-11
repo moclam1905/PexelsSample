@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import com.nguyenmoclam.pexelssample.core.navigation.AppNavigation
 import com.nguyenmoclam.pexelssample.ui.TempViewModel
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
@@ -15,6 +17,7 @@ class MainActivity : ComponentActivity() {
 
     private val tempViewModel: TempViewModel by viewModels()
 
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -22,7 +25,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PexelsSampleTheme {
-                AppNavigation()
+                val windowSizeClass = calculateWindowSizeClass(this)
+                AppNavigation(windowSizeClass = windowSizeClass)
             }
         }
     }

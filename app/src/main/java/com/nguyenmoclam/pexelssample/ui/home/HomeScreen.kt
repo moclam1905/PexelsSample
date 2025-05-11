@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,16 +31,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    searchViewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    windowSizeClass: WindowSizeClass
 ) {
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
     val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
     val navigateEffect by searchViewModel.navigateToResults.collectAsStateWithLifecycle()
+
+    LaunchedEffect(windowSizeClass) {
+        Log.d("HomeScreen", "WindowSizeClass updated: Width=${windowSizeClass.widthSizeClass}, Height=${windowSizeClass.heightSizeClass}")
+    }
 
     LaunchedEffect(navigateEffect) {
         if (navigateEffect) {
