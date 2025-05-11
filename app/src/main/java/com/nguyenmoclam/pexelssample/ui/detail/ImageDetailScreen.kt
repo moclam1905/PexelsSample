@@ -2,6 +2,7 @@ package com.nguyenmoclam.pexelssample.ui.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,10 @@ fun ImageDetailScreen(
     LaunchedEffect(photoId) {
         photo = searchViewModel.getPhotoById(photoId)
     }
+
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
 
     Scaffold(
         topBar = {
@@ -73,7 +80,27 @@ fun ImageDetailScreen(
                     contentDescription = currentPhoto.alt.ifBlank { "Full image by ${currentPhoto.photographer}" },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(aspectRatio.coerceIn(0.5f, 2f)),
+                        .aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY
+                        )
+                        .pointerInput(Unit) {
+                            detectTransformGestures { centroid, pan, zoom, rotation ->
+                                scale *= zoom
+                                // Basic panning restriction (AC5)
+                                if (scale > 1f) {
+                                    offsetX += pan.x
+                                    offsetY += pan.y
+                                } else {
+                                    // Reset offsets if scale is too small, to prevent panning when not zoomed
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                }
+                            }
+                        },
                     contentScale = ContentScale.Fit,
                     loading = {
                         Box(
