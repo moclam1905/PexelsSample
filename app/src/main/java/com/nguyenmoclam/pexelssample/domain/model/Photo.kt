@@ -7,7 +7,7 @@ data class Photo(
     val url: String,
     val photographer: String,
     val photographerUrl: String,
-    val photographerId: Int,
+    val photographerId: Long,
     val avgColor: String,
     val src: PhotoSrc,
     val alt: String // Non-nullable, to be handled by mapper

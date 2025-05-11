@@ -1,6 +1,7 @@
 package com.nguyenmoclam.pexelssample.ui.home
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.nguyenmoclam.pexelssample.data.mappers.toDomain
@@ -9,7 +10,6 @@ import com.nguyenmoclam.pexelssample.data.remote.model.PexelsPhotoDto
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsPhotoSrcDto
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsSearchResponseDto
 import com.nguyenmoclam.pexelssample.domain.model.Photo
-import com.nguyenmoclam.pexelssample.domain.model.PhotoSrc
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -76,7 +76,7 @@ class SearchViewModelTest {
     @Before
     fun setUp() {
         pexelsApiService = mockk()
-        viewModel = SearchViewModel(pexelsApiService)
+        viewModel = SearchViewModel(pexelsApiService, SavedStateHandle())
         mockkStatic(Log::class)
     }
 

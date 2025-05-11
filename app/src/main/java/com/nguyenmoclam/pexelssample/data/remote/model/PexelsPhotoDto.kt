@@ -18,7 +18,7 @@ data class PexelsPhotoDto(
     @SerialName("photographer_url")
     val photographerUrl: String,
     @SerialName("photographer_id")
-    val photographerId: Int,
+    val photographerId: Long,
     @SerialName("avg_color")
     val avgColor: String,
     @SerialName("src")
