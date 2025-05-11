@@ -219,9 +219,9 @@ class SearchViewModel @Inject constructor(
                     handleSearchError(response.code(), response.message(), response.errorBody()?.string())
                 }
             } catch (e: java.io.IOException) {
-                handleNetworkError("search", e)
+                handleNetworkError(e)
             } catch (e: Exception) {
-                handleGenericError("search", e)
+                handleGenericError(e)
             } finally {
                 _isLoading.value = false
                 updateIsResultsEmptyAndNavigateFlag(_searchQuery.value)
@@ -264,12 +264,12 @@ class SearchViewModel @Inject constructor(
                      Logger.d("SearchViewModel", "API Success (Page $currentPage): ${mappedNewPhotos.size} new. Total: ${_photos.value.size}. Saved state.")
                 } else {
                     // Do not increment currentPage on failure
-                    handleSearchError(response.code(), response.message(), response.errorBody()?.string(), isPagination = true)
+                    handleSearchError(response.code(), response.message(), response.errorBody()?.string(), operation = "pagination")
                 }
             } catch (e: java.io.IOException) {
-                handleNetworkError("pagination (Page $pageToLoad)", e)
+                handleNetworkError(e)
             } catch (e: Exception) {
-                handleGenericError("pagination (Page $pageToLoad)", e)
+                handleGenericError(e)
             } finally {
                 _isLoadingMore.value = false
             }
@@ -306,16 +306,16 @@ class SearchViewModel @Inject constructor(
             } else {
                 Logger.e("SearchViewModel", "API Error during page $pageToLoad restoration: ${response.code()} - ${response.message()}")
                 // Set error, stop further restoration attempts for this query
-                handleSearchError(response.code(), response.message(), response.errorBody()?.string(), isPagination = true, isRestoration = true)
+                handleSearchError(response.code(), response.message(), response.errorBody()?.string(), operation = "restoration")
                 success = false
             }
         } catch (e: java.io.IOException) {
             Logger.e("SearchViewModel", "Network error during page $pageToLoad restoration: ${e.message}", e)
-            handleNetworkError("page $pageToLoad restoration", e, isRestoration = true)
+            handleNetworkError(e, "page $pageToLoad restoration")
             success = false
         } catch (e: Exception) {
             Logger.e("SearchViewModel", "Other error during page $pageToLoad restoration: ${e.message}", e)
-            handleGenericError("page $pageToLoad restoration", e, isRestoration = true)
+            handleGenericError(e, "page $pageToLoad restoration")
             success = false
         } finally {
             _isLoadingMore.value = false
@@ -323,7 +323,7 @@ class SearchViewModel @Inject constructor(
         return success
     }
 
-    private fun handleSearchError(code: Int, message: String?, errorBody: String?, isPagination: Boolean = false, isRestoration: Boolean = false) {
+    private fun handleSearchError(code: Int, message: String?, errorBody: String?, operation: String = "search") {
         Logger.e("SearchViewModel", "API Error: $code - $message. Body: $errorBody")
         _errorState.value = when (code) {
             401, 403 -> UserFacingError(message = "Authentication error. Please check configuration.", isRetryable = false)
@@ -332,40 +332,46 @@ class SearchViewModel @Inject constructor(
             in 400..499 -> UserFacingError(message = "Invalid request (Error $code). Please try modifying your search.", isRetryable = true)
             else -> UserFacingError(message = "An unknown error occurred (Error $code). Please try again.", isRetryable = true)
         }
-        if (isPagination || isRestoration) { // If pagination or restoration fails
-            _canLoadMore.value = false // Stop further attempts
+        if (operation.contains("pagination") || operation.contains("restoration")) {
+            _canLoadMore.value = false
             savedStateHandle[KEY_CAN_LOAD_MORE] = false
-        } else { // If initial search fails
-            _isResultsEmpty.value = false // Not empty, but error
-            _navigateToResults.value = true // Navigate to show error
+        } else {
+            _photos.value = emptyList()
+            savedStateHandle.remove<List<Int>>(KEY_PHOTOS_LIST_IDS)
+            _navigateToResults.value = true
         }
-        if (isRestoration) _isLoading.value = false // Ensure main loading is stopped if restoration fails
+        if (operation.contains("restoration")) _isLoading.value = false
+        lastAction = null
     }
 
-    private fun handleNetworkError(context: String, e: java.io.IOException, isRestoration: Boolean = false) {
-        Logger.e("SearchViewModel", "Network error during $context: ${e.message}", e)
+    private fun handleNetworkError(e: java.io.IOException, operation: String = "operation") {
+        Logger.e("SearchViewModel", "$operation failed due to network error", e)
         _errorState.value = UserFacingError(message = "No internet connection. Please check your connection and try again.", isRetryable = true)
-        if (context.contains("pagination") || context.contains("restoration")) {
+        if (operation.contains("pagination") || operation.contains("restoration")) {
             _canLoadMore.value = false
             savedStateHandle[KEY_CAN_LOAD_MORE] = false
-        } else { // Initial search
-            _isResultsEmpty.value = false
+        } else {
+            _photos.value = emptyList()
+            savedStateHandle.remove<List<Int>>(KEY_PHOTOS_LIST_IDS)
             _navigateToResults.value = true
         }
-         if (isRestoration) _isLoading.value = false
+        if (operation.contains("restoration")) _isLoading.value = false
+        lastAction = null
     }
 
-    private fun handleGenericError(context: String, e: Exception, isRestoration: Boolean = false) {
-        Logger.e("SearchViewModel", "Other error during $context: ${e.message}", e)
+    private fun handleGenericError(e: Exception, operation: String = "operation") {
+        Logger.e("SearchViewModel", "$operation failed due to an unexpected error", e)
         _errorState.value = UserFacingError(message = "An unexpected error occurred: ${e.localizedMessage ?: "Unknown"}", isRetryable = true)
-         if (context.contains("pagination") || context.contains("restoration")) {
+        if (operation.contains("pagination") || operation.contains("restoration")) {
             _canLoadMore.value = false
             savedStateHandle[KEY_CAN_LOAD_MORE] = false
-        } else { // Initial search
-            _isResultsEmpty.value = false
+        } else {
+            _photos.value = emptyList()
+            savedStateHandle.remove<List<Int>>(KEY_PHOTOS_LIST_IDS)
             _navigateToResults.value = true
         }
-        if (isRestoration) _isLoading.value = false
+        if (operation.contains("restoration")) _isLoading.value = false
+        lastAction = null
     }
     
     private fun updateIsResultsEmptyAndNavigateFlag(query: String) {
@@ -394,17 +400,90 @@ class SearchViewModel @Inject constructor(
 
     // Story 8.1: Pull-to-Refresh
     fun onRefreshTriggered() {
-        Logger.d("SearchViewModel", "Pull-to-refresh triggered for query: ${_searchQuery.value}")
-        // Actual data fetching and setting _isRefreshing to false will be in Story 8.2
-        // For now, just set it to true to show the indicator and simulate some work.
-        // In a real scenario, you'd call a method similar to performSearchInternal but tailored for refresh.
-        _isRefreshing.value = true
+        if (_isRefreshing.value) {
+            Logger.d("SearchViewModel", "Refresh already in progress, ignoring trigger.")
+            return
+        }
 
-        // Placeholder: Simulate refresh completion for now, as Story 8.2 handles actual logic.
-        // viewModelScope.launch {
-        //     kotlinx.coroutines.delay(2000) // Simulate network delay
-        //     _isRefreshing.value = false
-        // }
+        _isRefreshing.value = true
+        _errorState.value = null
+        // lastAction = { onRefreshTriggered() } // Reconsider if retry for refresh is needed and how
+
+        Logger.d("SearchViewModel", "Refresh triggered. Query: '${_searchQuery.value}'")
+
+        viewModelScope.launch {
+            try {
+                if (_searchQuery.value.isNotBlank()) {
+                    val query = _searchQuery.value
+                    Logger.d("SearchViewModel", "Refreshing search for query: '$query'")
+                    val response = pexelsApiService.searchPhotos(
+                        query = query,
+                        page = 1, // Always fetch page 1 for refresh
+                        perPage = ITEMS_PER_PAGE
+                    )
+
+                    if (response.isSuccessful && response.body() != null) {
+                        val responseBody = response.body()!!
+                        val mappedPhotos = responseBody.photos.map { it.toDomain() }
+                        _photos.value = mappedPhotos
+                        currentPage = 1 // Reset to page 1
+                        totalResults = responseBody.totalResults
+                        _canLoadMore.value = responseBody.nextPage != null
+                        _errorState.value = null // Clear error on success
+
+                        // Update saved state for consistency, though not strictly required by refresh story
+                        savedStateHandle[KEY_CURRENT_PAGE] = currentPage
+                        savedStateHandle[KEY_TOTAL_RESULTS] = totalResults
+                        savedStateHandle[KEY_CAN_LOAD_MORE] = _canLoadMore.value
+                        savedStateHandle[KEY_PHOTOS_LIST_IDS] = _photos.value.map { it.id }
+
+                        Logger.d("SearchViewModel", "Refresh search success: ${mappedPhotos.size} photos. Total: $totalResults.")
+                    } else {
+                        handleSearchError(response.code(), response.message(), response.errorBody()?.string(), "refresh search")
+                    }
+                } else {
+                    // Assuming curated photos refresh is desired if no search query
+                    // This part aligns with AC2, but Pexels API might not have a direct "curated photos for page 1"
+                    // without a specific endpoint or if it's the same as their "popular" or default.
+                    // For now, let's assume pexelsApiService.getCuratedPhotos exists.
+                    // If not, this branch might need adjustment or removal based on actual PexelsApiService.
+                    Logger.d("SearchViewModel", "Refreshing curated photos.")
+                    // Call updated to getCuratedPhotosTest and removed page parameter
+                    val response = pexelsApiService.getCuratedPhotosTest(
+                        perPage = ITEMS_PER_PAGE
+                    )
+
+                    if (response.isSuccessful && response.body() != null) {
+                        val responseBody = response.body()!! // PexelsSearchResponseDto
+                        val mappedPhotos = responseBody.photos.map { it.toDomain() }
+                        _photos.value = mappedPhotos
+                        currentPage = 1 // Reset to page 1 conceptually, even if API doesn't take page for curated
+                        totalResults = responseBody.totalResults
+                        _canLoadMore.value = responseBody.nextPage != null
+                        _errorState.value = null
+
+                        savedStateHandle[KEY_CURRENT_PAGE] = currentPage
+                        savedStateHandle[KEY_TOTAL_RESULTS] = totalResults
+                        savedStateHandle[KEY_CAN_LOAD_MORE] = _canLoadMore.value
+                        savedStateHandle[KEY_PHOTOS_LIST_IDS] = _photos.value.map { it.id }
+                        Logger.d("SearchViewModel", "Refresh curated success: ${mappedPhotos.size} photos. Total: $totalResults.")
+                    } else {
+                         // Use a more specific error handler if available, or generalize handleSearchError
+                        handleSearchError(response.code(), response.message(), response.errorBody()?.string(), "refresh curated")
+                    }
+                }
+            } catch (e: java.io.IOException) {
+                handleNetworkError(e)
+            } catch (e: Exception) {
+                handleGenericError(e)
+            } finally {
+                _isRefreshing.value = false
+                // updateIsResultsEmptyAndNavigateFlag might be relevant here too
+                // For refresh, navigation is not the primary concern, but emptiness is.
+                _isResultsEmpty.value = _photos.value.isEmpty() && searchAttempted // searchAttempted might need re-evaluation here
+                Logger.d("SearchViewModel", "Refresh finished. isRefreshing set to false.")
+            }
+        }
     }
     // End Story 8.1
-} 
+}
