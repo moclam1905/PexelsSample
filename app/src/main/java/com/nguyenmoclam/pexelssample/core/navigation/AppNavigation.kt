@@ -28,7 +28,11 @@ fun AppNavigation(windowSizeClass: WindowSizeClass) {
             )
         }
         composable(ScreenRoutes.SEARCH_RESULTS) {
-            SearchResultsScreen(searchViewModel = searchViewModel, navController = navController)
+            SearchResultsScreen(
+                searchViewModel = searchViewModel,
+                navController = navController,
+                windowSizeClass = windowSizeClass
+            )
         }
         composable(
             route = ScreenRoutes.IMAGE_DETAIL + "/{${ScreenRoutes.IMAGE_DETAIL_PHOTO_ID_ARG}}",

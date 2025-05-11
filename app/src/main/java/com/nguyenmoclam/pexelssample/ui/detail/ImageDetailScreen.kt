@@ -30,6 +30,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
@@ -46,6 +47,7 @@ import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import android.content.res.Configuration
 
 private const val MIN_SCALE = 1.0f
 private const val MAX_SCALE = 3.0f // Example: Max zoom 3x
@@ -138,6 +140,9 @@ fun ImageDetailScreen(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -168,7 +173,13 @@ fun ImageDetailScreen(
                     contentDescription = currentPhoto.alt.ifBlank { "Full image by ${currentPhoto.photographer}" },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                        .let {
+                            if (isLandscape) {
+                                it.height(240.dp) // Fixed height in landscape mode
+                            } else {
+                                it.aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                            }
+                        }
                         .testTag("zoomableImage")
                         .semantics { this.imageScale = scaleAnimatable.value }
                         .onSizeChanged { newSize ->

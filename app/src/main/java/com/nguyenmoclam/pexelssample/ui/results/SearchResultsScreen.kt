@@ -34,12 +34,15 @@ import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
 import androidx.navigation.NavController
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchResultsScreen(
     searchViewModel: SearchViewModel,
-    navController: NavController
+    navController: NavController,
+    windowSizeClass: WindowSizeClass
 ) {
     val photoList by searchViewModel.photos.collectAsStateWithLifecycle()
     val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
@@ -50,6 +53,14 @@ fun SearchResultsScreen(
     val currentError by searchViewModel.errorState.collectAsStateWithLifecycle()
 
     val gridState = rememberLazyGridState()
+
+    // Determine column count based on window size class
+    val columnCount = when (windowSizeClass.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> 2
+        WindowWidthSizeClass.Medium -> 3
+        WindowWidthSizeClass.Expanded -> 4
+        else -> 2 // Default fallback
+    }
 
     val buffer = 3
     val shouldLoadMore by remember(photoList.size, canLoadMoreValue, isLoadingValue, isLoadingMoreValue, currentError) {
@@ -104,7 +115,7 @@ fun SearchResultsScreen(
             // Shown if photos are available and there's no overriding loading or error state.
             else if (photoList.isNotEmpty()) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(columnCount),
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(8.dp),
