@@ -51,6 +51,21 @@ class SearchViewModel @Inject constructor(
     private var searchAttempted = false
     private var lastAction: (() -> Unit)? = null // Added for retry mechanism
 
+    // --- Additions for Story 7.3: Adaptive Layout ---
+    private val _selectedPhotoForDetail = MutableStateFlow<Photo?>(null)
+    val selectedPhotoForDetail: StateFlow<Photo?> = _selectedPhotoForDetail.asStateFlow()
+
+    fun onPhotoSelected(photo: Photo) {
+        _selectedPhotoForDetail.value = photo
+        Logger.d("SearchViewModel", "Photo selected for detail: ID ${photo.id}")
+    }
+
+    fun clearDetailSelection() {
+        _selectedPhotoForDetail.value = null
+        Logger.d("SearchViewModel", "Detail selection cleared.")
+    }
+    // --- End Additions for Story 7.3 ---
+
     fun onQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery
     }

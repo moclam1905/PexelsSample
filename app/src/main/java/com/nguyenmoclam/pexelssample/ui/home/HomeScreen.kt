@@ -50,7 +50,7 @@ fun HomeScreen(
 
     LaunchedEffect(navigateEffect) {
         if (navigateEffect) {
-            navController.navigate(ScreenRoutes.SEARCH_RESULTS)
+            navController.navigate(ScreenRoutes.ADAPTIVE_SEARCH_RESULTS)
             searchViewModel.onNavigationComplete()
         }
     }

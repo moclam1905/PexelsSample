@@ -13,6 +13,7 @@ import com.nguyenmoclam.pexelssample.ui.detail.ImageDetailScreen
 import com.nguyenmoclam.pexelssample.ui.home.HomeScreen
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.results.SearchResultsScreen
+import com.nguyenmoclam.pexelssample.ui.adaptive.AdaptiveSearchResultsHostScreen
 
 @Composable
 fun AppNavigation(windowSizeClass: WindowSizeClass) {
@@ -31,6 +32,13 @@ fun AppNavigation(windowSizeClass: WindowSizeClass) {
             SearchResultsScreen(
                 searchViewModel = searchViewModel,
                 navController = navController,
+                windowSizeClass = windowSizeClass
+            )
+        }
+        composable(ScreenRoutes.ADAPTIVE_SEARCH_RESULTS) {
+            AdaptiveSearchResultsHostScreen(
+                navController = navController,
+                searchViewModel = searchViewModel,
                 windowSizeClass = windowSizeClass
             )
         }
