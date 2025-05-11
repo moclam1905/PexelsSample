@@ -7,7 +7,7 @@ compileSdk = "35"
 targetSdk = "35"
 
 # Jetpack Compose
-composeBom = "2024.04.01"
+composeBom = "2025.04.01"
 # composeCompiler = "2.0.21" # Compiler now aligns with Kotlin version via plugin
 
 # AndroidX
@@ -63,8 +63,6 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" } # Added navigation compose library
 androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" } # Added
-
-# AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 

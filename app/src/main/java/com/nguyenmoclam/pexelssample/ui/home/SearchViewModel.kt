@@ -42,6 +42,11 @@ class SearchViewModel @Inject constructor(
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
 
+    // Story 8.1: Pull-to-Refresh
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    // End Story 8.1
+
     private val _photos = MutableStateFlow<List<Photo>>(emptyList())
     val photos: StateFlow<List<Photo>> = _photos.asStateFlow()
 
@@ -386,4 +391,20 @@ class SearchViewModel @Inject constructor(
         Logger.d("SearchViewModel", "retryLastFailedOperation: Attempting to execute last stored action.")
         lastAction?.invoke()
     }
+
+    // Story 8.1: Pull-to-Refresh
+    fun onRefreshTriggered() {
+        Logger.d("SearchViewModel", "Pull-to-refresh triggered for query: ${_searchQuery.value}")
+        // Actual data fetching and setting _isRefreshing to false will be in Story 8.2
+        // For now, just set it to true to show the indicator and simulate some work.
+        // In a real scenario, you'd call a method similar to performSearchInternal but tailored for refresh.
+        _isRefreshing.value = true
+
+        // Placeholder: Simulate refresh completion for now, as Story 8.2 handles actual logic.
+        // viewModelScope.launch {
+        //     kotlinx.coroutines.delay(2000) // Simulate network delay
+        //     _isRefreshing.value = false
+        // }
+    }
+    // End Story 8.1
 } 

@@ -86,6 +86,21 @@ class SearchViewModelTest {
     }
 
     @Test
+    fun `onRefreshTriggered sets isRefreshing to true`() = mainCoroutineRule.runBlockingTest {
+        viewModel.isRefreshing.test {
+            assertThat(awaitItem()).isFalse() // Initial state
+
+            viewModel.onRefreshTriggered()
+
+            assertThat(awaitItem()).isTrue() // State after triggering refresh
+
+            // Story 8.2 will handle setting it back to false.
+            // For this story, we only check it's set to true.
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
     fun `onQueryChanged updates searchQuery StateFlow`() = mainCoroutineRule.runBlockingTest {
         viewModel.searchQuery.test {
             assertThat(awaitItem()).isEqualTo("")
