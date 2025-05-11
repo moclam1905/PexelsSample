@@ -261,9 +261,30 @@ fun CachedPhotoSrcEntity.toDomain(): PhotoSrc {
 
 *(Note: The `liked` field from the Pexels API is included in the DTO but commented out in the Domain Model as its direct use in the MVP is not specified. It can be easily added if needed. The `alt` text from the API can be null, so the DTO reflects this, and the mapper to the domain model provides a non-null default.)*
 
+## 4. Search History Data Structures (for Jetpack DataStore)
+
+These structures define how search history is stored using Jetpack DataStore (Preferences).
+
+### SearchHistoryItem (Conceptual)
+Represents a single search term. For Preferences DataStore, we'll likely store a `Set<String>` or a serialized list.
+
+**Using Preferences DataStore:**
+-   **Key:** `SEARCH_HISTORY_KEY = stringSetPreferencesKey("search_history_terms")`
+-   **Data Type Stored:** `Set<String>` containing the recent search terms.
+-   **Order:** Order will be managed by application logic (e.g., converting to a list and reversing for "most recent first" display, or storing a delimited string if order is critical and Set doesn't suffice easily). For simplicity, managing a `List<String>` serialized to JSON and stored as a single string preference, or storing a Set and re-ordering based on insertion time (if new terms are always added and old ones potentially removed) are options. A common approach for maintaining order with a fixed size is to use a `List<String>`, serialize it to JSON, and store it as a single string preference.
+
+```kotlin
+// Example key for Preferences DataStore
+// In a file like app/src/main/java/com/example/pexelssample/data/local/datastore/SearchHistoryKeys.kt
+object SearchHistoryKeys {
+    val SEARCH_HISTORY_TERMS = stringPreferencesKey("search_history_terms_json_list") // Storing a JSON string of List<String>
+}
+```
+
 ## Change Log
 
 | Change        | Date       | Version | Description                                     | Author     |
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft defining Domain, DTO, and Cache models. | Architect AI |
+| Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
 

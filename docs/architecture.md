@@ -73,6 +73,7 @@ graph TD
         Screen_Home["HomeScreen"]
         Screen_SearchResults["SearchResultsScreen"]
         Screen_ImageDetail["ImageDetailScreen"]
+        AdaptiveLayoutHost["AdaptiveLayoutHost (e.g., in HomeScreen or Root, uses WindowSizeClass)"]
         Composable_ImageItem["ImageItem (Reusable)"]
         Composable_SearchBar["SearchBar (Reusable)"]
         Composable_ErrorView["ErrorView (Reusable)"]
@@ -80,8 +81,8 @@ graph TD
     end
 
     subgraph "Presentation Logic (ViewModel - ui package)"
-        VM_Search["SearchViewModel"]
-        %% VM_ImageDetail (Optional)
+        VM_Search["SearchViewModel (Handles pull-to-refresh actions on the search results)"]
+        VM_ImageDetail["ImageDetailViewModel (Manages image data for ImageDetailScreen, and potentially zoom/pan state if complex)"]
     end
 
     subgraph "Domain Layer (domain package)"
@@ -89,6 +90,9 @@ graph TD
         Model_PhotoSrc["PhotoSrc (Domain Model)"]
         Interface_ImageRepo["ImageRepository (Interface)"]
         UseCase_Search["SearchPhotosUseCase (Optional)"]
+        Interface_SearchHistoryRepo["SearchHistoryRepository (Interface - Optional, or direct use of concrete repo)"]
+        UseCase_GetHistory["GetRecentSearchesUseCase (Optional)"]
+        UseCase_SaveSearch["SaveSearchTermUseCase (Optional)"]
     end
 
     subgraph "Data Layer (data package)"
@@ -105,18 +109,44 @@ graph TD
         Mappers["Data Mappers (data.mappers)"]
         Util_ImageLoader["ImageLoader (Coil - used in UI)"]
         Util_NetworkHandler["NetworkConnectivityHandler (core.utils)"]
+        Repo_ImageImpl["ImageRepositoryImpl"]
+        API_Pexels["PexelsApiService (Retrofit)"]
+        DB_Room["PexelsRoomDatabase (Image Cache)"]
+    
+        DataStore_SearchHistory["Search History DataStore (Jetpack DataStore)"]
+        Repo_SearchHistory["SearchHistoryRepository (Hilt Injected, uses DataStore)"]
     end
 
     subgraph "Cross-Cutting Concerns"
-        DI_Hilt["Hilt (Dependency Injection - di package)"]
+        DI_Hilt["Hilt"]
         CoroutinesFlow["Kotlin Coroutines & Flow"]
-        Navigation["Jetpack Navigation Compose (core.navigation)"]
-        AppTheme["Application Theme (ui.theme)"]
+        Navigation["Jetpack Navigation Compose (Handles navigation OR a selected item ID for two-pane)"]
+        AppTheme["Application Theme"]
+        Util_WindowSizeClass["WindowSizeClass Utility (Provides screen size info)"]
     end
 
     %% Connections
     Screen_Home --> VM_Search;
+    AdaptiveLayoutHost -- uses --> Util_WindowSizeClass;
+    AdaptiveLayoutHost -- "If Compact/Medium" --> Screen_SearchResults;
+    Screen_SearchResults -- "Tap (Compact/Medium)" --> Navigation; 
+    Navigation -- "Navigates with PhotoID" --> Screen_ImageDetail;
+
+    AdaptiveLayoutHost -- "If Expanded" ----> |Shows ListPane| Screen_SearchResults;
+    AdaptiveLayoutHost -- "If Expanded" ----> |Shows DetailPane| Screen_ImageDetail;
+
     Screen_SearchResults --> VM_Search;
+    Screen_ImageDetail --> VM_ImageDetail;
+    Screen_SearchResults -- "Pull-to-Refresh Action" --> VM_Search;
+    Composable_SearchBar -- "Focus/Input" --> VM_Search; % For showing history
+    VM_Search -- "Fetches/Saves History" --> Repo_SearchHistory; % Or via UseCases
+    Repo_SearchHistory -- "Accesses" --> DataStore_SearchHistory;
+
+    VM_Search -- "Refreshes Image Data" --> Repo_ImageImpl; % Existing connection
+    VM_Search -- "Provides Photo List" --> Screen_SearchResults;
+    VM_Search -- "Provides SelectedPhoto (for Expanded)" --> Screen_ImageDetail; 
+    VM_ImageDetail -- "Receives Photo/ID" --> |Fetches/Displays| Model_Photo; 
+
     VM_Search -- uses --> Interface_ImageRepo; 
     UseCase_Search -- uses --> Interface_ImageRepo;
     Repo_ImageImpl -- implements --> Interface_ImageRepo;
@@ -153,6 +183,11 @@ graph TD
   - **Offline Caching (Metadata):** Room for API response metadata; Coil for image files. [55, 68, 69]
   - **Secure API Key Management:** Via `gradle.properties` and `BuildConfig`. (Story 1.2) [25, 56, 71]
   - **Modular UI with Reusable Composables.**
+  -   **ViewModel for Complex UI State:** For screens with intricate UI state that needs to survive configuration changes robustly (e.g., zoom/pan state in `ImageDetailScreen`), a dedicated ViewModel leveraging `SavedStateHandle` is preferred over relying solely on `rememberSaveable` within the Composable if state becomes too complex.
+  -   **Local Storage with Jetpack DataStore for Search History:** Jetpack DataStore (Preferences or Proto) will be used to store the user's recent search terms locally, providing an asynchronous API for data persistence. [87]
+    -   *Justification:* Lightweight and suitable for simple key-value or typed object persistence, recommended for this use case over Room unless complex querying is needed.
+-   **Rich UI Animations & Transitions with Jetpack Compose:** The application will utilize Jetpack Compose's built-in animation APIs (`animate*AsState`, `AnimatedVisibility`, `LookaheadLayout` for shared elements, etc.) to create purposeful and performant UI transitions and feedback, enhancing the user experience. [38, 143, 149]
+    -   *Justification:* Improves perceived quality and user engagement. Shared element transitions, in particular, provide visual continuity.
   - (See `docs/coding-standards.md` for more on patterns and error handling).
 
 ## 5\. Infrastructure and Deployment Overview
@@ -187,4 +222,4 @@ graph TD
 | Change        | Date       | Version | Description                                     | Author     |
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial architecture document based on PRD, epics, and collaborative decisions. | Architect AI |
-
+| Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |

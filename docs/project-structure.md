@@ -30,6 +30,8 @@ PexelsSample/
 │   │   │  │       │   │   ├── PexelsRoomDatabase.kt
 │   │   │  │       │   │   ├── dao/
 │   │   │  │       │   │   │   └── PhotoDao.kt
+│   │   │  │       │   │   ├── datastore/      # New package for DataStore
+│   │   │  │       │   │   │   └── SearchHistoryDataStoreManager.kt (or similar)
 │   │   │  │       │   │   └── model/        # Room entities (if distinct from domain models)
 │   │   │  │       │   │       └── CachedImageEntity.kt (example)
 │   │   │  │       │   ├── remote/           # Remote data source (Pexels API)
@@ -40,6 +42,7 @@ PexelsSample/
 │   │   │  │       │   │       └── PexelsSearchResponseDto.kt
 │   │   │  │       │   ├── repository/       # Repository implementations
 │   │   │  │       │   │   └── ImageRepositoryImpl.kt
+│   │   │  │       │   │   └── SearchHistoryRepositoryImpl.kt # New repository
 │   │   │  │       │   └──mappers/          # Mappers to convert DTOs/Entities to Domain Models
 │   │   │  │       │       └── PhotoMappers.kt
 │   │   │  │       │
@@ -47,6 +50,8 @@ PexelsSample/
 │   │   │  │       │   ├── AppModule.kt
 │   │   │  │       │   ├── NetworkModule.kt
 │   │   │  │       │   └── DatabaseModule.kt
+│   │   │  │       │   ├── DataStoreModule.kt  # New module for DataStore
+│   │   │  │       │   └── RepositoryModule.kt # Update to include SearchHistoryRepository
 │   │   │  │       │
 │   │   │  │       ├── domain/               # Domain layer: Core business logic, Use Cases, Domain Models
 │   │   │  │       │   ├── model/            # Domain models (e.g., Photo, PhotoSrc - clean representation)
@@ -54,9 +59,13 @@ PexelsSample/
 │   │   │  │       │   │   └── PhotoSrc.kt
 │   │   │  │       │   ├── repository/       # Repository interfaces (defined in domain)
 │   │   │  │       │   │   └── ImageRepository.kt
+│   │   │  │       │   │   └── SearchHistoryRepository.kt # New interface
 │   │   │  │       │   └── usecase/          # Use cases (optional, for more complex logic)
 │   │   │  │       │       ├── SearchPhotosUseCase.kt
 │   │   │  │       │       └── GetCuratedPhotosUseCase.kt
+│   │   │  │       │       ├── GetRecentSearchesUseCase.kt # New
+│   │   │  │       │       ├── SaveSearchTermUseCase.kt    # New
+│   │   │  │       │       └── ClearSearchHistoryUseCase.kt # New
 │   │   │  │       │
 │   │   │  │       └── ui/                   # Presentation layer: Composables, ViewModels, UI-related state
 │   │   │  │           ├── common/           # Reusable Composables shared across features
@@ -124,6 +133,7 @@ PexelsSample/
     * `domain/usecase/`: (Optional but recommended for encapsulating complex business logic) Contains individual classes, each representing a single business operation or user story (e.g., `SearchPhotosUseCase`, `GetPhotoDetailsUseCase`). Use cases orchestrate calls to repositories.
 * **`ui/`**: Contains all UI-related components (Jetpack Compose) and ViewModels.
     * `ui/common/`: Reusable Composable functions that can be used across multiple feature screens (e.g., `ImageItem`, `ErrorView`, `LoadingIndicator`).
+        * `ui/common/adaptive/`: Reusable Composables specifically for adaptive layout structures (e.g., MasterDetailLayout).
     * `ui/theme/`: Jetpack Compose theme definitions (colors, typography, shapes).
     * `ui/{feature_name}/`: Sub-packages for each distinct feature or screen (e.g., `ui/home/`, `ui/detail/`, `ui/results/`). Each feature package typically contains:
         * `{FeatureName}Screen.kt`: The main Composable function for the screen.
@@ -143,4 +153,5 @@ PexelsSample/
 | Change        | Date       | Version | Description                                     | Author     |
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft based on MVVM and Clean Arch principles. | Architect AI |
+| Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
 

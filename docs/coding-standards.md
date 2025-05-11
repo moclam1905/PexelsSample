@@ -68,6 +68,33 @@
     -   Preview Composables using `@Preview` annotation during development.
     -   Refer to official Jetpack Compose guidelines: [https://developer.android.com/jetpack/compose/mental-model](https://developer.android.com/jetpack/compose/mental-model)
 
+ - **Gesture Handling in Compose**
+    -   **Prioritize `Modifier.pointerInput`:** For custom gesture detection like pinch-zoom, pan, and double-tap, utilize the `pointerInput` modifier with appropriate detectors (`detectTransformGestures`, `detectTapGestures`) as the primary approach.
+    -   **State Management:** Gesture state (scale, offset, rotation) should be managed using `remember` and `mutableStateOf`. For persistence across configuration changes, use `rememberSaveable`, potentially with custom `Saver` objects for complex states, or delegate to a ViewModel using `SavedStateHandle`.
+    -   **Transformations:** Apply visual transformations (scale, translation) using `Modifier.graphicsLayer` for efficiency.
+    -   **Performance:** Be mindful of the complexity of calculations within gesture callbacks. Profile interactions if jank is observed.
+    -   **Avoid Conflicts:** Ensure custom gestures do not conflict with parent Composable gestures or system gestures.
+
+- **Adaptive Design with WindowSizeClasses**
+
+    -   **Calculate `WindowSizeClass` at appropriate levels:** Typically at the root of the app (`MainActivity`) or per-screen if fine-grained control is needed.
+    -   **Pass `WindowSizeClass` down:** Propagate the calculated size class to Composables that need to adapt their layout.
+    -   **Use `when` expressions:** Employ `when` expressions on `windowSizeClass.widthSizeClass` (and `heightSizeClass` if needed) to choose between different layout arrangements or parameters (e.g., number of columns, visibility of panes).
+    -   **Prefer adaptive modifiers and layouts:** Utilize Compose's intrinsic capabilities for flexible layouts (e.g., `Row`, `Column` weights, `FlowRow`, `FlowColumn`, `BoxWithConstraints`) before resorting to entirely separate Composables for different size classes, unless the layouts are vastly different.
+    -   **Test thoroughly:** Preview and test adaptive layouts across different device types (phones, foldables, tablets), orientations, and window sizes (e.g., multi-window mode).
+
+
+## UI Animations and Transitions
+
+-   **Purposeful Animations:** Animations should be meaningful, guiding the user, providing feedback, or enhancing the perceived performance and polish. Avoid gratuitous or distracting animations.
+-   **Performance First:** All animations must target 60fps and be tested for jank. Use `Modifier.graphicsLayer` for properties like `scale`, `alpha`, `translation` when animating frequently. Profile animations if performance issues are suspected.
+-   **Jetpack Compose APIs:** Prioritize the use of Jetpack Compose's built-in animation APIs (e.g., `animate*AsState`, `updateTransition`, `Animatable`, `AnimatedVisibility`, `AnimatedContent`, `LookaheadLayout`).
+-   **Shared Element Transitions:** For shared element transitions (e.g., image from grid to detail), investigate and utilize `LookaheadLayout` or other advanced Compose layout/animation coordination techniques. Ensure smooth forward and reverse transitions.
+-   **Consistency:** Strive for consistent animation styles and durations for similar interactions across the app.
+-   **Subtlety:** Many effective animations are subtle and quick (e.g., fade-ins, slight position changes).
+-   **Transitions in Navigation:** Utilize `enterTransition`, `exitTransition`, `popEnterTransition`, and `popExitTransition` in Jetpack Navigation Compose for screen-to-screen transitions.
+-   **Respect User Preferences:** Be mindful of system-level animation scale settings (Developer Options). While direct API support in Compose for this is evolving, design animations that are still acceptable if durations are reduced system-wide.
+
 ## Error Handling Strategy (General Approach)
 
 -   **Exceptions for Exceptional Situations:** Use Kotlin exceptions to signal errors.
@@ -92,6 +119,10 @@
     -   **Network & API Calls:** Repositories should wrap API calls in `try-catch` blocks to handle `IOExceptions` (network issues) or `HttpExceptions` (API errors from Retrofit). Map these to the `ResultWrapper` or specific error types. Implement retry logic with backoff for transient errors if Pexels API guidelines suggest it.
     -   **Input Validation:** Perform input validation in ViewModels (e.g., for search query length) before initiating actions.
     -   **Graceful Degradation:** If an API call fails, the app should clearly communicate the error rather than crashing. Cached data might be shown if available and appropriate.
+- **DataStore Operations**
+    -   All DataStore read/write operations must be performed asynchronously using Kotlin Coroutines and Flows.
+    -   Handle potential `IOExceptions` when accessing DataStore.
+    -   Define clear `Preferences.Key<T>` for Preferences DataStore or use Proto DataStore with defined schemas for type safety.
 
 ## Security Best Practices
 
@@ -121,4 +152,5 @@
 | Change        | Date       | Version | Description                                     | Author     |
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft covering key coding and pattern guidelines. | Architect AI |
+| Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
 

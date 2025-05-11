@@ -28,6 +28,8 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
     -   **UseCases (if implemented):** Test specific business logic rules.
     -   **Mappers:** Test accurate conversion between DTOs, Domain Models, and Cache Entities.
     -   **Utility functions.**
+    -   **`SearchHistoryRepository` / UseCases:** Test logic for adding, retrieving, normalizing, and clearing search terms (with mocked DataStore).
+
 -   **Expectations:**
     -   Fast execution, run on every commit locally and in CI.
     -   No Android framework dependencies (true unit tests running on JVM).
@@ -49,6 +51,7 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
     -   **DAO (Room):** Testing database CRUD operations against an in-memory Room database.
     -   **ViewModel with Mocked Repository (Instrumented):** If testing interactions that require Android context not easily available in JVM unit tests.
     -   **PexelsApiService with MockWebServer:** Ensuring requests are formatted correctly and responses are parsed as expected.
+    -   **`SearchHistoryRepository` with actual DataStore:** Testing persistence and retrieval of search history terms using a test instance of DataStore (e.g., by providing a test file path for Preferences DataStore).
 -   **Expectations:**
     -   Slower than unit tests as they may run on an emulator/device.
     -   Focus on the contracts and interactions between components.
@@ -66,9 +69,31 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
     -   Searching for an image and verifying results are displayed.
     -   Pagination: Scrolling to load more results.
     -   Navigating to the image detail screen and verifying image/metadata.
+    -   **Pinch-to-zoom gestures (zoom in, zoom out) and panning of the image in the detail view (Epic 6).**
+        -   **Double-tap to zoom/reset zoom in the image detail view (Epic 6).**
+        -   **Verification of zoom level constraints and boundary checks (Epic 6).**
+        -   **Restoration of zoom/pan state after configuration changes (Epic 6).**
     -   Display of loading states.
     -   Display of error states (network error, API error, no results) and retry functionality.
     -   Empty states (e.g., no search results).
+    -   **Layout adaptation based on `WindowSizeClass` (Epic 7):**
+        -   Correct number of columns in search results grid for Compact, Medium, Expanded widths.
+        -   Switch between single-pane and two-pane layouts (if implemented) for Image Detail view based on width class.
+        -   Readability and usability of UI elements (text, spacing, touch targets) across different screen configurations.
+    -   **State preservation and correct layout rendering across orientation changes and multi-window mode adjustments (Epic 7).**
+    -   **Pull-to-refresh functionality on the results screen, including visual feedback and data update (Epic 8).**
+    -   **Search History (Epic 8):**
+        -   Display of recent searches when search bar is focused and empty.
+        -   Executing a search by tapping a history item.
+        -   Deleting individual history items.
+        -   Clearing all search history.
+        -   Correct normalization and ordering of history items.
+    -   **UI Animations & Transitions (Epic 9):**
+        -   Correctness and smoothness of shared element transitions between image grid and detail view.
+        -   Fade-in animations for loaded images in the grid.
+        -   Animated appearance of empty/error/loading states.
+        -   General screen transition animations (if custom).
+        -   Performance of animations on target devices.
 -   **Expectations:**
     -   Most expensive tests, run on emulators/devices.
     -   Focus on critical user paths and UI correctness.
@@ -102,4 +127,4 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
 | Change        | Date       | Version | Description                                     | Author     |
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft outlining the testing strategy for PexelsSample. | Architect AI |
-
+| Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
