@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 
 @Composable
 fun ImageItem(
@@ -59,7 +60,8 @@ fun ImageItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
+            .aspectRatio(1f)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp),
         onClick = { onItemClick(photo) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

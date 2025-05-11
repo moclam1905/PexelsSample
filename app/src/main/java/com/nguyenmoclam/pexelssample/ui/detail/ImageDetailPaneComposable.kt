@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -167,7 +168,7 @@ fun ImageDetailPaneComposable(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()) // Allow scrolling for details if content overflows
-                    .padding(8.dp)
+                    .padding(16.dp)
             ) {
                 SubcomposeAsyncImage(
                     model = currentPhoto.src.large2x,
@@ -336,15 +337,20 @@ fun ImageDetailPaneComposable(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "View on Pexels",
-                    style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary),
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { uriHandler.openUri(currentPhoto.url) }
-                        .padding(8.dp),
-                    textAlign = TextAlign.Center
-                )
+                        .sizeIn(minHeight = 48.dp)
+                        .clickable { uriHandler.openUri(currentPhoto.url) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "View on Pexels",
+                        style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 val avgColor = remember(currentPhoto.avgColor) { parseColor(currentPhoto.avgColor) }
                 if (avgColor != Color.Transparent) {

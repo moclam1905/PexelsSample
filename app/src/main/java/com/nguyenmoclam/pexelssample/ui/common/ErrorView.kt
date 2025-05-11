@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nguyenmoclam.pexelssample.ui.model.UserFacingError
+import androidx.compose.foundation.layout.sizeIn
 
 @Composable
 fun ErrorView(
@@ -48,7 +49,10 @@ fun ErrorView(
         )
         if (error.isRetryable) {
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry) {
+            Button(
+                onClick = onRetry,
+                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            ) {
                 Text("Retry")
             }
         }

@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +45,14 @@ fun HomeScreen(
     val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
     val navigateEffect by searchViewModel.navigateToResults.collectAsStateWithLifecycle()
 
+    // AC2: Adaptive padding based on window size
+    val screenPadding = when (windowSizeClass.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> 16.dp
+        WindowWidthSizeClass.Medium -> 24.dp
+        WindowWidthSizeClass.Expanded -> 32.dp
+        else -> 16.dp
+    }
+
     LaunchedEffect(windowSizeClass) {
         Log.d("HomeScreen", "WindowSizeClass updated: Width=${windowSizeClass.widthSizeClass}, Height=${windowSizeClass.heightSizeClass}")
     }
@@ -64,7 +73,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(screenPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {

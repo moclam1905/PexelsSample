@@ -148,7 +148,10 @@ fun ImageDetailScreen(
             TopAppBar(
                 title = { Text(photoFromVM?.photographer?.let { "Photo by $it" } ?: "Image Detail") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -313,11 +316,19 @@ fun ImageDetailScreen(
                     Text("Photographer: ${currentPhoto.photographer}", style = MaterialTheme.typography.titleMedium)
                     Text("Source: Pexels.com", style = MaterialTheme.typography.bodySmall)
                     if (currentPhoto.photographerUrl.isNotBlank()) {
-                        Text(
-                            text = "View photographer's profile",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.clickable { uriHandler.openUri(currentPhoto.photographerUrl) }
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
+                                .clickable { uriHandler.openUri(currentPhoto.photographerUrl) },
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(
+                                text = "View photographer\'s profile",
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
                     }
                     if (currentPhoto.alt.isNotBlank()) {
                         Text("Description: ${currentPhoto.alt}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
