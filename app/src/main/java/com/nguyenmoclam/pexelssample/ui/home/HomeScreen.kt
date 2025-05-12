@@ -4,58 +4,46 @@ import android.util.Log
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
+import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun HomeScreen(
+fun SharedTransitionScope.HomeScreen(
     navController: NavController,
-    searchViewModel: SearchViewModel,
-    windowSizeClass: WindowSizeClass
+    viewModel: HomeScreenViewModel = hiltViewModel(),
+    windowSizeClass: WindowSizeClass,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
-    val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
-    val navigateEffect by searchViewModel.navigateToResults.collectAsStateWithLifecycle()
-
-    // Story 8.5: Collect recent searches state
-    val showRecentSearches by searchViewModel.showRecentSearchesSuggestions.collectAsStateWithLifecycle()
-    val recentSearchesList by searchViewModel.recentSearches.collectAsStateWithLifecycle()
-    // End Story 8.5
+    val photosList by viewModel.photos.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingInitial.collectAsStateWithLifecycle()
 
     // AC2: Adaptive padding based on window size
     val screenPadding = when (windowSizeClass.widthSizeClass) {
@@ -69,122 +57,57 @@ fun HomeScreen(
         Log.d("HomeScreen", "WindowSizeClass updated: Width=${windowSizeClass.widthSizeClass}, Height=${windowSizeClass.heightSizeClass}")
     }
 
-    LaunchedEffect(navigateEffect) {
-        if (navigateEffect) {
-            navController.navigate(ScreenRoutes.ADAPTIVE_SEARCH_RESULTS)
-            searchViewModel.onNavigationComplete()
-        }
-    }
-
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Pexels Image Search") })
+            TopAppBar(
+                title = { Text("Trending Photos") },
+                actions = {
+                    IconButton(onClick = {
+                        navController.navigate(ScreenRoutes.ADAPTIVE_SEARCH_RESULTS)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search"
+                        )
+                    }
+                }
+            )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(screenPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = currentQuery,
-                    onValueChange = { searchViewModel.onQueryChanged(it) },
-                    placeholder = { Text("Search for images...") },
-                    label = { Text("Search") },
+            if (isLoading && photosList.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (photosList.isNotEmpty()) {
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Fixed(2),
                     modifier = Modifier
-                        .weight(1f)
-                        .onFocusChanged { focusState ->
-                            searchViewModel.onSearchBarFocusChanged(focusState.isFocused)
-                        },
-                    singleLine = true,
-                    enabled = !isLoadingValue,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search Icon"
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = 8.dp,
+                        bottom = 8.dp
+                    ),
+                    verticalItemSpacing = 8.dp,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        count = photosList.size,
+                        key = { index -> photosList[index].id }
+                    ) { index ->
+                        val photo = photosList[index]
+                        ImageItem(
+                            photo = photo,
+                            onItemClick = { /* TODO: Navigation to detail (Story 10.7) */ },
+                            sharedTransitionScope = this@HomeScreen,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            dynamicHeight = true
                         )
                     }
-                )
-                IconButton(onClick = {
-                    searchViewModel.onSearchClicked()
-                }, enabled = !isLoadingValue,
-                   modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search button"
-                    )
-                }
-            }
 
-            // Story 8.5: Display Recent Searches
-            if (showRecentSearches) {
-                if (recentSearchesList.isNotEmpty()) {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        items(recentSearchesList, key = { it }) { term ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        searchViewModel.onHistoryItemClicked(term)
-                                    }
-                                    .padding(vertical = 8.dp, horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.History,
-                                    contentDescription = "Recent search item",
-                                    modifier = Modifier.padding(end = 12.dp)
-                                )
-                                Text(
-                                    text = term,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(
-                                    onClick = { searchViewModel.deleteHistoryItem(term) },
-                                    modifier = Modifier.sizeIn(minWidth = 40.dp, minHeight = 40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Delete search term: $term"
-                                    )
-                                }
-                            }
-                        }
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 16.dp, end = 16.dp), contentAlignment = Alignment.CenterEnd) {
-                                Button(
-                                    onClick = { searchViewModel.clearAllHistory() },
-                                ) {
-                                    Text("Clear All History")
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "No recent searches",
-                        modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                    )
-                }
-            }
-            // End Story 8.5
-
-            if (isLoadingValue) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
                 }
             }
         }

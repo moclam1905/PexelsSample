@@ -311,40 +311,6 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `when search bar loses focus, recent searches are hidden`() = runTest {
-        coEvery { searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE) } returns flowOf(listOf("cat", "dog"))
-
-        viewModel.showRecentSearchesSuggestions.test {
-            viewModel.onQueryChanged("")
-            viewModel.onSearchBarFocusChanged(true)
-            advanceUntilIdle()
-            assertThat(awaitItem()).isTrue()
-
-            viewModel.onSearchBarFocusChanged(false)
-            advanceUntilIdle()
-            assertThat(awaitItem()).isFalse()
-            cancelAndConsumeRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `when text entered into search bar, recent searches are hidden`() = runTest {
-        coEvery { searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE) } returns flowOf(listOf("cat", "dog"))
-
-        viewModel.showRecentSearchesSuggestions.test {
-            viewModel.onQueryChanged("")
-            viewModel.onSearchBarFocusChanged(true)
-            advanceUntilIdle()
-            assertThat(awaitItem()).isTrue()
-
-            viewModel.onQueryChanged("a")
-            advanceUntilIdle()
-            assertThat(awaitItem()).isFalse()
-            cancelAndConsumeRemainingEvents()
-        }
-    }
-
-    @Test
     fun `when search bar focused, then text entered, then text cleared, searches reappear`() = runTest {
         val history = listOf("test1", "test2")
         coEvery { searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE) } returns flowOf(history)

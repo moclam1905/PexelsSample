@@ -48,8 +48,9 @@ fun AppNavigation(windowSizeClass: WindowSizeClass) {
             composable(ScreenRoutes.HOME) {
                 HomeScreen(
                     navController = navController,
-                    searchViewModel = searchViewModel,
-                    windowSizeClass = windowSizeClass
+                    windowSizeClass = windowSizeClass,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@composable
                 )
             }
             composable(ScreenRoutes.SEARCH_RESULTS) {

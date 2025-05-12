@@ -42,13 +42,14 @@ fun SharedTransitionScope.ImageItem(
     modifier: Modifier = Modifier,
     onItemClick: (Photo) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    dynamicHeight: Boolean = false
 ) {
     val context = LocalContext.current
     val imageRequest = remember(photo.src.medium, photo.id, context) {
         ImageRequest.Builder(context)
             .data(photo.src.medium)
-            .transitionFactory(CrossfadeTransition.Factory(durationMillis = 300, preferExactIntrinsicSize = true))
+            .transitionFactory(CrossfadeTransition.Factory(durationMillis = 300, preferExactIntrinsicSize = dynamicHeight))
             .listener(
                 onStart = { _ ->
                     Log.d("ImageItem_CoilListener", "Photo ID: ${photo.id} (AsyncImage) - Coil Request Started")
@@ -66,56 +67,69 @@ fun SharedTransitionScope.ImageItem(
             .build()
     }
 
-    Card(
-        modifier = modifier
+    val cardModifier = if (dynamicHeight) {
+        modifier
+            .fillMaxWidth()
+    } else {
+        modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+    }
+
+    val imageWrapperBoxModifier = if (dynamicHeight) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier.fillMaxSize()
+    }
+
+    val imageContentScale = if (dynamicHeight) ContentScale.FillWidth else ContentScale.Crop
+
+    val imageDisplayModifier = (if (dynamicHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+        .then(
+            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                Modifier.sharedElement(
+                    sharedContentState = sharedTransitionScope.rememberSharedContentState(key = "image-${photo.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+            } else {
+                Modifier
+            }
+        )
+
+    val placeholderBoxModifier = (if (dynamicHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+
+    Card(
+        modifier = cardModifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
         onClick = { onItemClick(photo) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = imageWrapperBoxModifier, contentAlignment = Alignment.Center) {
             SubcomposeAsyncImage(
                 model = imageRequest,
                 contentDescription = photo.alt.ifBlank { "Photo by ${photo.photographer}" },
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
-                            Modifier.sharedElement(
-                                sharedContentState = sharedTransitionScope.rememberSharedContentState(key = "image-${photo.id}"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
-                        } else {
-                            Modifier
-                        }
-                    ),
+                contentScale = imageContentScale,
+                modifier = imageDisplayModifier,
                 loading = {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(parseColor(photo.avgColor)),
+                        modifier = placeholderBoxModifier.background(parseColor(photo.avgColor)),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp), // Adjusted size for grid item
+                            modifier = Modifier.size(32.dp),
                             strokeWidth = 3.dp
                         )
                     }
                 },
                 error = {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = placeholderBoxModifier.background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.BrokenImage,
                             contentDescription = "Error loading image",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(40.dp) // Adjusted size for grid item
+                            modifier = Modifier.size(40.dp)
                         )
                     }
                 },
