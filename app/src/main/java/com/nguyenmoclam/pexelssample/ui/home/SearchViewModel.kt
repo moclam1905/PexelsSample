@@ -312,6 +312,14 @@ class SearchViewModel @Inject constructor(
                     savedStateHandle[KEY_PHOTOS_LIST_IDS] = _photos.value.map { it.id }
                     Logger.d("SearchViewModel", "API Success: ${_photos.value.size} photos. Total: $totalResults. Saved state.")
 
+                    // Story 8.7: Add search term to history
+                    if (_searchQuery.value.isNotBlank()) { // Ensure query is not blank before adding
+                        viewModelScope.launch {
+                            searchHistoryRepository.addSearchTerm(_searchQuery.value)
+                            Logger.d("SearchViewModel", "Search term '${_searchQuery.value}' added to history.")
+                        }
+                    }
+
                 } else {
                     handleSearchError(response.code(), response.message(), response.errorBody()?.string())
                 }

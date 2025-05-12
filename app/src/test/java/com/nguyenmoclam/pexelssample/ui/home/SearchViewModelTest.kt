@@ -80,8 +80,9 @@ class SearchViewModelTest {
     @Before
     fun setUp() {
         pexelsApiService = mockk()
-        searchHistoryRepository = mockk()
+        searchHistoryRepository = mockk(relaxed = true)
         viewModel = SearchViewModel(pexelsApiService, searchHistoryRepository, SavedStateHandle())
+        coEvery { searchHistoryRepository.getRecentSearches(any()) } returns flowOf(emptyList())
         mockkStatic(Log::class)
     }
 
