@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import com.nguyenmoclam.pexelssample.data.local.PexelsRoomDatabase
 import com.nguyenmoclam.pexelssample.data.local.dao.PhotoDao
+import com.nguyenmoclam.pexelssample.data.local.datastore.SearchHistoryDataStoreManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
 import javax.inject.Singleton
 
 @Module
@@ -32,4 +34,11 @@ object DatabaseModule {
     fun providePhotoDao(database: PexelsRoomDatabase): PhotoDao {
         return database.photoDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideSearchHistoryDataStoreManager(
+        @ApplicationContext context: Context, 
+        json: Json
+    ): SearchHistoryDataStoreManager = SearchHistoryDataStoreManager(context, json)
 } 

@@ -28,6 +28,9 @@ coil = "2.7.0" # Added Coil version
 # Coroutines
 kotlinxCoroutines = "1.8.1" # Added for kotlinx-coroutines-test
 
+# DataStore
+datastorePreferences = "1.1.1" # Added DataStore Preferences version
+
 # Hilt
 hilt = "2.50"
 hiltCompiler = "1.2.0"
@@ -95,6 +98,9 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" } # Added
 mockk-agent = { group = "io.mockk", name = "mockk-agent", version.ref = "mockk" } # Added
 google-truth = { group = "com.google.truth", name = "truth", version.ref = "truth" } # Added
+
+# DataStore
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" } # Added DataStore Preferences library
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
