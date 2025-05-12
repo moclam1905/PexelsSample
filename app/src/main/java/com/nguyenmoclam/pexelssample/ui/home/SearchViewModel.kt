@@ -6,18 +6,23 @@ import androidx.lifecycle.viewModelScope
 import com.nguyenmoclam.pexelssample.data.mappers.toDomain
 import com.nguyenmoclam.pexelssample.data.remote.PexelsApiService
 import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.domain.repository.SearchHistoryRepository
+import com.nguyenmoclam.pexelssample.data.local.datastore.SearchHistoryKeys
 import com.nguyenmoclam.pexelssample.logger.Logger
 import com.nguyenmoclam.pexelssample.ui.model.UserFacingError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val pexelsApiService: PexelsApiService,
+    private val searchHistoryRepository: SearchHistoryRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -70,6 +75,16 @@ class SearchViewModel @Inject constructor(
     // --- Additions for Story 7.3: Adaptive Layout ---
     private val _selectedPhotoForDetail = MutableStateFlow<Photo?>(null)
     val selectedPhotoForDetail: StateFlow<Photo?> = _selectedPhotoForDetail.asStateFlow()
+
+    // Story 8.5: State for recent searches UI
+    private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+    val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
+
+    private val _showRecentSearchesSuggestions = MutableStateFlow(false)
+    val showRecentSearchesSuggestions: StateFlow<Boolean> = _showRecentSearchesSuggestions.asStateFlow()
+
+    private val _isSearchBarFocused = MutableStateFlow(false)
+    // End Story 8.5
 
     init {
         val restoredQuery = savedStateHandle.get<String>(KEY_SEARCH_QUERY)
@@ -130,6 +145,37 @@ class SearchViewModel @Inject constructor(
         }
          // If there was a search query from savedStateHandle, set it.
         // _searchQuery is already initialized from savedStateHandle
+
+        // Story 8.5: Combine searchQuery and isSearchBarFocused to manage recent searches visibility
+        viewModelScope.launch {
+            combine(_searchQuery, _isSearchBarFocused) { query, isFocused ->
+                Pair(query, isFocused)
+            }.collectLatest { (query, isFocused) ->
+                if (isFocused && query.isBlank()) {
+                    Logger.d("SearchViewModel", "Search bar focused and query empty, fetching recent searches.")
+                    searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE)
+                        .collectLatest { history ->
+                            _recentSearches.value = history
+                            _showRecentSearchesSuggestions.value = history.isNotEmpty()
+                            if (history.isNotEmpty()) {
+                                Logger.d("SearchViewModel", "Recent searches loaded: ${history.size} items.")
+                            } else {
+                                Logger.d("SearchViewModel", "No recent searches found.")
+                            }
+                        }
+                } else {
+                    if (_showRecentSearchesSuggestions.value) {
+                        Logger.d("SearchViewModel", "Hiding recent searches. Focused: $isFocused, Query: \'$query\'")
+                    }
+                    _showRecentSearchesSuggestions.value = false
+                    // Optionally clear recent searches when not shown to free up memory,
+                    // but they might be useful if focus comes back quickly.
+                    // For now, let's keep them until a new fetch overwrites.
+                    // _recentSearches.value = emptyList()
+                }
+            }
+        }
+        // End Story 8.5
     }
 
     fun onPhotoSelected(photo: Photo) {
@@ -165,8 +211,20 @@ class SearchViewModel @Inject constructor(
             _selectedPhotoForDetail.value = null // Clear selection when query changes
             savedStateHandle.remove<Int>(KEY_SELECTED_PHOTO_ID)
             Logger.d("SearchViewModel", "Query changed to: \'$newQuery\', state updated and saved.")
+            // Story 8.5: Logic for recent searches is handled by the combine operator.
+            // No direct call to hide suggestions here is needed as combine will react.
         }
     }
+
+    // Story 8.5: New method to handle search bar focus changes
+    fun onSearchBarFocusChanged(isFocused: Boolean) {
+        if (_isSearchBarFocused.value != isFocused) {
+            Logger.d("SearchViewModel", "Search bar focus changed to: $isFocused")
+            _isSearchBarFocused.value = isFocused
+            // Logic for recent searches is handled by the combine operator.
+        }
+    }
+    // End Story 8.5
 
     fun onSearchClicked() {
         if (_searchQuery.value.isNotBlank()) {

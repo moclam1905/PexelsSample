@@ -1,8 +1,7 @@
 package com.nguyenmoclam.pexelssample.ui.home
 
-// import androidx.compose.material3.Button // Will remove this if not used elsewhere
-// import androidx.compose.runtime.mutableStateOf // No longer needed for searchQuery
-// import androidx.compose.runtime.remember // No longer needed for searchQuery
+import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,11 +30,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
-import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +46,11 @@ fun HomeScreen(
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
     val isLoadingValue by searchViewModel.isLoading.collectAsStateWithLifecycle()
     val navigateEffect by searchViewModel.navigateToResults.collectAsStateWithLifecycle()
+
+    // Story 8.5: Collect recent searches state
+    val showRecentSearches by searchViewModel.showRecentSearchesSuggestions.collectAsStateWithLifecycle()
+    val recentSearchesList by searchViewModel.recentSearches.collectAsStateWithLifecycle()
+    // End Story 8.5
 
     // AC2: Adaptive padding based on window size
     val screenPadding = when (windowSizeClass.widthSizeClass) {
@@ -87,7 +94,11 @@ fun HomeScreen(
                     onValueChange = { searchViewModel.onQueryChanged(it) },
                     placeholder = { Text("Search for images...") },
                     label = { Text("Search") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { focusState ->
+                            searchViewModel.onSearchBarFocusChanged(focusState.isFocused)
+                        },
                     singleLine = true,
                     enabled = !isLoadingValue,
                     leadingIcon = {
@@ -108,6 +119,40 @@ fun HomeScreen(
                     )
                 }
             }
+
+            // Story 8.5: Display Recent Searches
+            if (showRecentSearches) {
+                if (recentSearchesList.isNotEmpty()) {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        items(recentSearchesList) { term ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        searchViewModel.onQueryChanged(term) // Update query
+                                        searchViewModel.onSearchClicked()    // Perform search
+                                        // Focus should be lost or handled by VM when search starts
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.History,
+                                    contentDescription = "Recent search item",
+                                    modifier = Modifier.padding(end = 12.dp)
+                                )
+                                Text(term)
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "No recent searches",
+                        modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                    )
+                }
+            }
+            // End Story 8.5
 
             if (isLoadingValue) {
                 Box(

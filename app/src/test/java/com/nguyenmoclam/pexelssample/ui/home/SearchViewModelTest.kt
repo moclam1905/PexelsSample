@@ -10,6 +10,8 @@ import com.nguyenmoclam.pexelssample.data.remote.model.PexelsPhotoDto
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsPhotoSrcDto
 import com.nguyenmoclam.pexelssample.data.remote.model.PexelsSearchResponseDto
 import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.domain.repository.SearchHistoryRepository
+import com.nguyenmoclam.pexelssample.data.local.datastore.SearchHistoryKeys
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -18,6 +20,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -64,6 +67,7 @@ class SearchViewModelTest {
 
     private lateinit var viewModel: SearchViewModel
     private lateinit var pexelsApiService: PexelsApiService
+    private lateinit var searchHistoryRepository: SearchHistoryRepository
 
     private val mockPhotoSrcDto = PexelsPhotoSrcDto(original = "original_url", large2x = "large2x_url", large = "large_url", medium = "medium_url", small = "small_url", portrait = "portrait_url", landscape = "landscape_url", tiny = "tiny_url")
     private val mockPhotoDto1 = PexelsPhotoDto(id = 1, width = 100, height = 100, url = "url1", photographer = "Photographer 1", photographerUrl = "", photographerId = 1, avgColor = "", src = mockPhotoSrcDto, liked = false, alt = "Photo 1")
@@ -76,7 +80,8 @@ class SearchViewModelTest {
     @Before
     fun setUp() {
         pexelsApiService = mockk()
-        viewModel = SearchViewModel(pexelsApiService, SavedStateHandle())
+        searchHistoryRepository = mockk()
+        viewModel = SearchViewModel(pexelsApiService, searchHistoryRepository, SavedStateHandle())
         mockkStatic(Log::class)
     }
 
@@ -351,6 +356,143 @@ class SearchViewModelTest {
             mutableStateFlow.value = photos
         } catch (e: Exception) {
             throw RuntimeException("Failed to set _photos field in SearchViewModel via reflection", e)
+        }
+    }
+
+    @Test
+    fun `when search bar loses focus, recent searches are hidden`() = runTest {
+        val recentSearchesList = listOf("cat", "dog")
+        coEvery { searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE) } returns flowOf(recentSearchesList)
+
+        // Initial: focused, empty query -> suggestions shown
+        viewModel.onSearchBarFocusChanged(true)
+        advanceUntilIdle()
+        // Assert initial state if necessary, or assume it's covered by other tests
+        // For this test, we directly proceed to losing focus
+
+        viewModel.showRecentSearchesSuggestions.test {
+            // Skip initial false if any, wait for true after focus
+            // This might require consuming the initial false if test starts with it.
+            // Assuming it becomes true from setup/previous action.
+            // Let's ensure it is true first
+            viewModel.onQueryChanged("") // ensure query is empty
+            viewModel.onSearchBarFocusChanged(true)
+            advanceUntilIdle()
+            val initialState = expectMostRecentItem()
+
+            viewModel.onSearchBarFocusChanged(false) // Lose focus
+            advanceUntilIdle()
+
+            // If initial state was true, it should now be false.
+            // If it was already false (e.g. query not empty), it remains false.
+            // The crucial part is that it *becomes* false if it was true.
+            if (initialState) {
+                 assertThat(awaitItem()).isFalse()
+            } else {
+                 assertThat(expectMostRecentItem()).isFalse() // Stays false or becomes false
+            }
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `when text entered into search bar, recent searches are hidden`() = runTest {
+        val recentSearchesList = listOf("cat", "dog")
+        coEvery { searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE) } returns flowOf(recentSearchesList)
+
+        // Initial: focused, empty query -> suggestions shown
+        viewModel.onSearchBarFocusChanged(true)
+        viewModel.onQueryChanged("")
+        advanceUntilIdle()
+        // Assert initial state if necessary
+
+        viewModel.showRecentSearchesSuggestions.test {
+            // Skip initial states, wait for suggestions to be potentially shown
+            // then check they hide after query change.
+            // Let's ensure it is true first
+            viewModel.onSearchBarFocusChanged(true)
+            viewModel.onQueryChanged("")
+            advanceUntilIdle()
+            val initialState = expectMostRecentItem()
+
+            viewModel.onQueryChanged("a") // Enter text
+            advanceUntilIdle()
+
+            if (initialState) {
+                assertThat(awaitItem()).isFalse()
+            } else {
+                assertThat(expectMostRecentItem()).isFalse()
+            }
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `when search bar focused, then text entered, then text cleared, searches reappear`() = runTest {
+        val history = listOf("test1", "test2")
+        coEvery { searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE) } returns flowOf(history)
+
+        viewModel.showRecentSearchesSuggestions.test {
+            assertThat(awaitItem()).isFalse() // Initial
+
+            // 1. Focus (query is initially empty)
+            viewModel.onSearchBarFocusChanged(true)
+            advanceUntilIdle()
+            assertThat(awaitItem()).isTrue() // Shown
+
+            // 2. Text entered
+            viewModel.onQueryChanged("cat")
+            advanceUntilIdle()
+            assertThat(awaitItem()).isFalse() // Hidden
+
+            // 3. Text cleared
+            viewModel.onQueryChanged("")
+            advanceUntilIdle()
+            assertThat(awaitItem()).isTrue() // Shown again
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `showRecentSearchesSuggestions from to true when focus`() = runTest {
+        coEvery {
+            searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE)
+        } returns flowOf(listOf("cat", "dog"))
+
+        viewModel.showRecentSearchesSuggestions.test {
+            assertThat(awaitItem()).isFalse()
+
+            viewModel.onSearchBarFocusChanged(true)
+            advanceUntilIdle()
+
+            assertThat(awaitItem()).isTrue()
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `recentSearches is empty and return list when focus`() = runTest {
+        val recentList = listOf("cat", "dog")
+        coEvery {
+            searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE)
+        } returns flowOf(recentList)
+
+        viewModel.recentSearches.test {
+            assertThat(awaitItem()).isEmpty()
+
+            viewModel.onSearchBarFocusChanged(true)
+            advanceUntilIdle()
+
+            assertThat(awaitItem()).isEqualTo(recentList)
+
+            coVerify {
+                searchHistoryRepository.getRecentSearches(SearchHistoryKeys.MAX_HISTORY_SIZE)
+            }
+
+            cancelAndConsumeRemainingEvents()
         }
     }
 } 
