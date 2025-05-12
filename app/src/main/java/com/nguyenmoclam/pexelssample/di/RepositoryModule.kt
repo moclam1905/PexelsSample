@@ -1,6 +1,8 @@
 package com.nguyenmoclam.pexelssample.di
 
+import com.nguyenmoclam.pexelssample.data.repository.ImageRepositoryImpl
 import com.nguyenmoclam.pexelssample.data.repository.SearchHistoryRepositoryImpl
+import com.nguyenmoclam.pexelssample.domain.repository.ImageRepository
 import com.nguyenmoclam.pexelssample.domain.repository.SearchHistoryRepository
 import dagger.Binds
 import dagger.Module
@@ -17,4 +19,10 @@ abstract class RepositoryModule {
     abstract fun bindSearchHistoryRepository(
         searchHistoryRepositoryImpl: SearchHistoryRepositoryImpl
     ): SearchHistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindImageRepository(
+        imageRepositoryImpl: ImageRepositoryImpl
+    ): ImageRepository
 } 
