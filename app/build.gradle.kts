@@ -116,4 +116,9 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // Jetpack Compose Animation :->
+    implementation(libs.androidx.animation)
+    implementation(libs.androidx.animation.core)
+    implementation(libs.androidx.foundation)
 }

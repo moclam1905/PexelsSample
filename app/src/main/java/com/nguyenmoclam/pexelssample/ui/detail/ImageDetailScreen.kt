@@ -1,5 +1,8 @@
 package com.nguyenmoclam.pexelssample.ui.detail
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -58,13 +61,15 @@ private const val ANIMATION_DURATION_MILLIS = 300
 val ImageScale = SemanticsPropertyKey<Float>("ImageScale")
 var SemanticsPropertyReceiver.imageScale by ImageScale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun ImageDetailScreen(
+fun SharedTransitionScope.ImageDetailScreen(
     navController: NavController,
     photoId: Int,
     searchViewModel: SearchViewModel = hiltViewModel(),
-    imageDetailViewModel: ImageDetailViewModel = hiltViewModel()
+    imageDetailViewModel: ImageDetailViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     var localPhoto by remember { mutableStateOf<Photo?>(null) }
 
@@ -174,15 +179,26 @@ fun ImageDetailScreen(
                 SubcomposeAsyncImage(
                     model = currentPhoto.src.large2x,
                     contentDescription = currentPhoto.alt.ifBlank { "Full image by ${currentPhoto.photographer}" },
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .let {
+                        .let { mod ->
                             if (isLandscape) {
-                                it.height(240.dp) // Fixed height in landscape mode
+                                mod.height(240.dp) // Fixed height in landscape mode
                             } else {
-                                it.aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                                mod.aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
                             }
                         }
+                        .then(
+                            if (!isLandscape) { // Only apply if NOT landscape (i.e., portrait)
+                                Modifier.sharedElement(
+                                    sharedContentState = sharedTransitionScope.rememberSharedContentState(key = "image-${currentPhoto.id}"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            } else {
+                                Modifier
+                            }
+                        )
                         .testTag("zoomableImage")
                         .semantics { this.imageScale = scaleAnimatable.value }
                         .onSizeChanged { newSize ->
@@ -306,7 +322,6 @@ fun ImageDetailScreen(
                             Icon(Icons.Filled.BrokenImage, contentDescription = "Error loading image", tint = MaterialTheme.colorScheme.error)
                         }
                     },
-                    contentScale = ContentScale.Fit,
                     success = { state ->
                         SubcomposeAsyncImageContent()
                     }

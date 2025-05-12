@@ -1,5 +1,8 @@
 package com.nguyenmoclam.pexelssample.ui.detail
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -47,6 +50,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -64,11 +69,14 @@ import kotlin.math.abs
 private const val ANIMATION_DURATION_MILLIS_PANE = 300
 private const val INTERMEDIATE_SCALE_FACTOR_PANE = 2.0f
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun ImageDetailPaneComposable(
+fun SharedTransitionScope.ImageDetailPaneComposable(
     selectedPhoto: Photo?,
     imageDetailViewModel: ImageDetailViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     LaunchedEffect(selectedPhoto) {
         imageDetailViewModel.setPhotoDetails(selectedPhoto)
@@ -176,6 +184,16 @@ fun ImageDetailPaneComposable(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(imageContainerAspectRatio.coerceIn(0.5f, 3f)) // Apply calculated aspect ratio
+                        .then(
+                            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                                Modifier.sharedElement(
+                                    sharedContentState = sharedTransitionScope.rememberSharedContentState(key = "image-${currentPhoto.id}"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            } else {
+                                Modifier
+                            }
+                        )
                         .testTag("zoomableImagePane")
                         .semantics { this.imageScale = scaleAnimatable.value }
                         .onSizeChanged { newSize -> layoutSize = newSize }
@@ -318,7 +336,7 @@ fun ImageDetailPaneComposable(
                             Icon(Icons.Filled.BrokenImage, contentDescription = "Error loading image", tint = MaterialTheme.colorScheme.error)
                         }
                     },
-                    contentScale = ContentScale.Fit // Fit within the bounds defined by aspectRatio
+                    contentScale = ContentScale.Fit
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(

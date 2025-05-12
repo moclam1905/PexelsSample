@@ -1,5 +1,8 @@
 package com.nguyenmoclam.pexelssample.ui.results
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,10 +14,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -23,23 +28,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
 import com.nguyenmoclam.pexelssample.domain.model.Photo
 import com.nguyenmoclam.pexelssample.domain.model.PhotoSrc
-import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
 import com.nguyenmoclam.pexelssample.ui.common.ErrorView
-import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.theme.PexelsSampleTheme
-import androidx.navigation.NavController
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun SearchResultsScreen(
+fun SharedTransitionScope.SearchResultsScreen(
     searchViewModel: SearchViewModel,
     navController: NavController,
-    windowSizeClass: WindowSizeClass
+    windowSizeClass: WindowSizeClass,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
 
@@ -65,7 +69,9 @@ fun SearchResultsScreen(
             },
             modifier = Modifier.padding(paddingValues),
             gridCellsCount = columnCount,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope
         )
     }
 }
@@ -141,7 +147,7 @@ fun SearchResultsScreenPreview_WithData() {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(listOf(samplePhoto, samplePhoto2)) { photo ->
-                 ImageItem(photo = photo, onItemClick = {})
+                 Text("ImageItem placeholder for preview")
             }
         }
     }

@@ -45,6 +45,10 @@ turbine = "1.1.0" # Added for Turbine
 mockk = "1.13.10" # Added for MockK
 truth = "1.4.2" # Added for Google Truth
 
+# ANIMATION :->
+animation = "1.7.0-beta05"
+foundation = "1.7.0-beta05"
+
 [libraries]
 # Android Gradle Plugin
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
@@ -101,6 +105,10 @@ google-truth = { group = "com.google.truth", name = "truth", version.ref = "trut
 
 # DataStore
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" } # Added DataStore Preferences library
+# ANIMATION :->
+androidx-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
+androidx-animation-core = { module = "androidx.compose.animation:animation-core", version.ref = "animation" }
+androidx-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

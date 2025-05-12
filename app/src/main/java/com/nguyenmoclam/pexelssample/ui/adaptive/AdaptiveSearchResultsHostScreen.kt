@@ -1,6 +1,9 @@
 package com.nguyenmoclam.pexelssample.ui.adaptive
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,12 +33,14 @@ import com.nguyenmoclam.pexelssample.ui.results.SearchResultsListComposable
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun AdaptiveSearchResultsHostScreen(
+fun SharedTransitionScope.AdaptiveSearchResultsHostScreen(
     navController: NavController,
     searchViewModel: SearchViewModel, // Re-use the instance from AppNavigation
-    windowSizeClass: WindowSizeClass
+    windowSizeClass: WindowSizeClass,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val selectedPhotoForDetail by searchViewModel.selectedPhotoForDetail.collectAsStateWithLifecycle()
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
@@ -78,13 +83,17 @@ fun AdaptiveSearchResultsHostScreen(
                             searchViewModel.onPhotoSelected(photo)
                         },
                         gridCellsCount = 1, // Single column for the list pane
-                        snackbarHostState = snackbarHostState
+                        snackbarHostState = snackbarHostState,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
                 }
                 Box(modifier = Modifier.weight(0.6f).fillMaxHeight().padding(start = 4.dp)) { // Detail pane
                     ImageDetailPaneComposable(
                         selectedPhoto = selectedPhotoForDetail,
                         // imageDetailViewModel will be hiltViewModel() within the composable
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
                 }
             }
@@ -97,7 +106,9 @@ fun AdaptiveSearchResultsHostScreen(
                 },
                 modifier = Modifier.padding(paddingValues),
                 gridCellsCount = if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium) 3 else 2,
-                snackbarHostState = snackbarHostState
+                snackbarHostState = snackbarHostState,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }

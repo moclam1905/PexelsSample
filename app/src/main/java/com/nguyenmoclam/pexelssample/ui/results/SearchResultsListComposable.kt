@@ -1,5 +1,8 @@
 package com.nguyenmoclam.pexelssample.ui.results
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,14 +43,16 @@ import com.nguyenmoclam.pexelssample.ui.common.ImageItem
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.model.UserFacingError
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun SearchResultsListComposable(
+fun SharedTransitionScope.SearchResultsListComposable(
     searchViewModel: SearchViewModel,
     onPhotoClick: (Photo) -> Unit,
     modifier: Modifier = Modifier,
     gridCellsCount: Int = 2, // Default for smaller screens, can be adjusted
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val photos by searchViewModel.photos.collectAsStateWithLifecycle()
     val isLoading by searchViewModel.isLoading.collectAsStateWithLifecycle()
@@ -131,7 +136,12 @@ fun SearchResultsListComposable(
                     modifier = Modifier.fillMaxSize() // This modifier is for the grid itself
                 ) {
                     items(photos, key = { photo -> photo.id }) { photo ->
-                        ImageItem(photo = photo, onItemClick = { onPhotoClick(photo) })
+                        ImageItem(
+                            photo = photo,
+                            onItemClick = { onPhotoClick(photo) },
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
                     }
                     if (isLoadingMore) {
                         item(span = { GridItemSpan(this.maxLineSpan) }) {
