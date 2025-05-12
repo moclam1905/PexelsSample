@@ -2,6 +2,9 @@ package com.nguyenmoclam.pexelssample.core.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
@@ -26,10 +29,22 @@ fun AppNavigation(windowSizeClass: WindowSizeClass) {
     val navController = rememberNavController()
     val searchViewModel: SearchViewModel = hiltViewModel()
 
+    // Define default transitions
+    val subtleFadeEnter = fadeIn(animationSpec = tween(durationMillis = 250))
+    val subtleFadeExit = fadeOut(animationSpec = tween(durationMillis = 200))
+
     SharedTransitionLayout(
         modifier = Modifier.fillMaxSize()
     ) {
-        NavHost(navController = navController, startDestination = ScreenRoutes.HOME) {
+        NavHost(
+            navController = navController,
+            startDestination = ScreenRoutes.HOME,
+            // Apply default transitions
+            enterTransition = { subtleFadeEnter },
+            exitTransition = { subtleFadeExit },
+            popEnterTransition = { subtleFadeEnter },
+            popExitTransition = { subtleFadeExit }
+        ) {
             composable(ScreenRoutes.HOME) {
                 HomeScreen(
                     navController = navController,
