@@ -86,6 +86,45 @@ class SearchViewModel @Inject constructor(
     private val _isSearchBarFocused = MutableStateFlow(false)
     // End Story 8.5
 
+    // Story 8.6: Interaction with Search History Items
+    fun onHistoryItemClicked(term: String) {
+        Logger.d("SearchViewModel", "History item clicked: '$term'")
+        _searchQuery.value = term
+        savedStateHandle[KEY_SEARCH_QUERY] = term // Keep saved state in sync
+        _showRecentSearchesSuggestions.value = false // Hide suggestions after click
+
+        // Reset pagination and flags for a new search based on history item
+        _photos.value = emptyList()
+        currentPage = 1
+        totalResults = 0
+        _canLoadMore.value = false
+        searchAttempted = false // Mark as a new search attempt
+        savedStateHandle[KEY_SEARCH_ATTEMPTED] = false
+        _errorState.value = null // Clear previous errors
+
+        performSearchInternal() // Execute the search
+    }
+
+    fun deleteHistoryItem(term: String) {
+        viewModelScope.launch {
+            Logger.d("SearchViewModel", "Deleting history item: '$term'")
+            searchHistoryRepository.deleteSearchTerm(term)
+            // The recentSearches Flow should automatically update if collected appropriately in the init block
+            // or wherever it's being observed. The combine logic in init should re-fetch.
+        }
+    }
+
+    fun clearAllHistory() {
+        viewModelScope.launch {
+            Logger.d("SearchViewModel", "Clearing all search history.")
+            searchHistoryRepository.clearSearchHistory()
+            // Similar to delete, the Flow should update.
+            // _showRecentSearchesSuggestions will be set to false by the combine logic
+            // if recentSearches becomes empty.
+        }
+    }
+    // End Story 8.6
+
     init {
         val restoredQuery = savedStateHandle.get<String>(KEY_SEARCH_QUERY)
         val restoredCurrentPage = savedStateHandle.get<Int>(KEY_CURRENT_PAGE)

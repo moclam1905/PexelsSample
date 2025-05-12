@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -124,24 +126,44 @@ fun HomeScreen(
             if (showRecentSearches) {
                 if (recentSearchesList.isNotEmpty()) {
                     LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        items(recentSearchesList) { term ->
+                        items(recentSearchesList, key = { it }) { term ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        searchViewModel.onQueryChanged(term) // Update query
-                                        searchViewModel.onSearchClicked()    // Perform search
-                                        // Focus should be lost or handled by VM when search starts
+                                        searchViewModel.onHistoryItemClicked(term)
                                     }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(vertical = 8.dp, horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.History,
                                     contentDescription = "Recent search item",
                                     modifier = Modifier.padding(end = 12.dp)
                                 )
-                                Text(term)
+                                Text(
+                                    text = term,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(
+                                    onClick = { searchViewModel.deleteHistoryItem(term) },
+                                    modifier = Modifier.sizeIn(minWidth = 40.dp, minHeight = 40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Delete search term: $term"
+                                    )
+                                }
+                            }
+                        }
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 16.dp, end = 16.dp), contentAlignment = Alignment.CenterEnd) {
+                                Button(
+                                    onClick = { searchViewModel.clearAllHistory() },
+                                ) {
+                                    Text("Clear All History")
+                                }
                             }
                         }
                     }
