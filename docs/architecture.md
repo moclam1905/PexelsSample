@@ -9,15 +9,17 @@ PexelsSample is a native Android application built using Kotlin `2.0.21` and Jet
 
 The application architecture is centered around the MVVM pattern. The UI (View) is built with Jetpack Compose Composables, observing data and state exposed by ViewModels. ViewModels interact with Repositories to fetch and manage data from the Pexels API and a local Room database cache. User interactions trigger actions in the ViewModel, which updates its state and potentially fetches new data via the Repository. The Repository layer abstracts data source logic. Kotlin Coroutines and Flow are used for asynchronous operations and reactive data streams. Hilt manages dependencies.
 
-The primary user interaction flow:
-
-1.  User inputs a search query or views curated photos.
-2.  The Composable UI (View) sends this action to the `SearchViewModel`.
-3.  The `SearchViewModel` requests data from the `ImageRepository`.
-4.  The `ImageRepository` fetches image data from the Pexels API (and caches/retrieves metadata via Room).
-5.  The `SearchViewModel` updates its state (e.g., list of photos, loading/error status) exposed via `StateFlow`.
-6.  The UI recomposes to display the images or state changes.
-7.  User can tap an image to navigate to a detail view.
+The primary user interaction flow involves:
+1.  **User launches the app and is presented with the `HomeScreen` displaying trending/curated photos.**
+2.  **User can scroll infinitely to load more trending photos or trigger a manual refresh.**
+3.  User can tap a trending photo to navigate to the `ImageDetailScreen`.
+4.  User can initiate a search (e.g., via a search icon/bar on `HomeScreen` or by navigating to a dedicated search screen).
+5.  If searching, the Composable UI (View) sends this action to the `SearchViewModel`.
+6.  The `SearchViewModel` requests data from the `ImageRepository`.
+7.  The `ImageRepository` fetches image data from the Pexels API (Search endpoint).
+8.  The `SearchViewModel` updates its state (e.g., list of photos, loading/error status) exposed via `StateFlow`.
+9.  The UI recomposes to display the search results.
+10. User can tap an image from search results to navigate to a detail view.
 
 <!-- end list -->
 
@@ -70,7 +72,9 @@ The application is structured into Presentation (UI and ViewModel), Domain (core
 ```mermaid
 graph TD
     subgraph "User Interface (View - ui package)"
-        Screen_Home["HomeScreen"]
+        MainActivity["MainActivity (Hosts NavGraph)"]
+        NavGraph["AppNavigation"]
+        Screen_Home["HomeScreen (Displays trending photos in a LazyVerticalStaggeredGrid, handles infinite scroll, refresh, and navigation to search/detail. Uses WindowSizeClass for adaptive columns.)"]
         Screen_SearchResults["SearchResultsScreen"]
         Screen_ImageDetail["ImageDetailScreen"]
         AdaptiveLayoutHost["AdaptiveLayoutHost (e.g., in HomeScreen or Root, uses WindowSizeClass)"]
@@ -81,7 +85,8 @@ graph TD
     end
 
     subgraph "Presentation Logic (ViewModel - ui package)"
-        VM_Search["SearchViewModel (Handles pull-to-refresh actions on the search results)"]
+        VM_Home["HomeScreenViewModel (Manages fetching, pagination, and state for trending/curated photos on HomeScreen. Interacts with ImageRepository.)"]
+        VM_Search["SearchViewModel (Manages state for image search functionality, search results, pagination, pull-to-refresh for search, and search history. Interacts with ImageRepository and SearchHistoryRepository.)"]
         VM_ImageDetail["ImageDetailViewModel (Manages image data for ImageDetailScreen, and potentially zoom/pan state if complex)"]
     end
 
@@ -125,8 +130,15 @@ graph TD
         Util_WindowSizeClass["WindowSizeClass Utility (Provides screen size info)"]
     end
 
+    %% HomeScreen Flow
+    MainActivity --> NavGraph;
+    NavGraph -- "Default Route" --> Screen_Home;
+    Screen_Home --> VM_Home;
+    VM_Home -- "Gets Curated Photos" --> Interface_ImageRepo;
+    Screen_Home -- "Tap Image" --> NavGraph; % Navigates to ImageDetailScreen
+    Screen_Home -- "Initiate Search Action" --> NavGraph; % Navigates to SearchScreen or expands search UI
+
     %% Connections
-    Screen_Home --> VM_Search;
     AdaptiveLayoutHost -- uses --> Util_WindowSizeClass;
     AdaptiveLayoutHost -- "If Compact/Medium" --> Screen_SearchResults;
     Screen_SearchResults -- "Tap (Compact/Medium)" --> Navigation; 
@@ -186,8 +198,10 @@ graph TD
   -   **ViewModel for Complex UI State:** For screens with intricate UI state that needs to survive configuration changes robustly (e.g., zoom/pan state in `ImageDetailScreen`), a dedicated ViewModel leveraging `SavedStateHandle` is preferred over relying solely on `rememberSaveable` within the Composable if state becomes too complex.
   -   **Local Storage with Jetpack DataStore for Search History:** Jetpack DataStore (Preferences or Proto) will be used to store the user's recent search terms locally, providing an asynchronous API for data persistence. [87]
     -   *Justification:* Lightweight and suitable for simple key-value or typed object persistence, recommended for this use case over Room unless complex querying is needed.
--   **Rich UI Animations & Transitions with Jetpack Compose:** The application will utilize Jetpack Compose's built-in animation APIs (`animate*AsState`, `AnimatedVisibility`, `LookaheadLayout` for shared elements, etc.) to create purposeful and performant UI transitions and feedback, enhancing the user experience. [38, 143, 149]
-    -   *Justification:* Improves perceived quality and user engagement. Shared element transitions, in particular, provide visual continuity.
+  -   **Rich UI Animations & Transitions with Jetpack Compose:** The application will utilize Jetpack Compose's built-in animation APIs (`animate*AsState`, `AnimatedVisibility`, `LookaheadLayout` for shared elements, etc.) to create purposeful and performant UI transitions and feedback, enhancing the user experience. [38, 143, 149]
+        -   *Justification:* Improves perceived quality and user engagement. Shared element transitions, in particular, provide visual continuity.
+  -   **Engaging Initial Experience with Staggered Grid:** The HomeScreen will use `LazyVerticalStaggeredGrid` to display trending/curated photos, providing a visually dynamic and engaging entry point to the application. [127, 171]
+        -   *Justification:* Enhances user engagement and content discovery upon app launch.
   - (See `docs/coding-standards.md` for more on patterns and error handling).
 
 ## 5\. Infrastructure and Deployment Overview
@@ -208,6 +222,13 @@ graph TD
 -   `epic3.md`
 -   `epic4.md`
 -   `epic5.md`
+-   `epic6.md`
+-   `epic7.md`
+-   `epic8.md`
+-   `epic9.md`
+-   `epic10.md`
+-   `research-homescreen-trending-photos.md`
+-   `deep-research-bonus-features.md`
 -   `tech-stack.md`
 -   `project-structure.md`
 -   `coding-standards.md`
@@ -219,7 +240,8 @@ graph TD
 
 ## 7\. Change Log
 
-| Change        | Date       | Version | Description                                     | Author     |
-| :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
+| Change        | Date       | Version | Description                                                                     | Author     |
+| :------------ |:-----------|:--------|:--------------------------------------------------------------------------------| :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial architecture document based on PRD, epics, and collaborative decisions. | Architect AI |
-| Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
+| Bonus Features | 2025-05-10 | 1.1     | Bonus Features                                                                  | Architect AI |
+| Trending Photos on HomeScreen | 2025-05-12 | 1.2     | New Features                                                                    | Architect AI |

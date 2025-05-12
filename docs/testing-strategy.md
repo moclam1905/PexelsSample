@@ -29,7 +29,7 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
     -   **Mappers:** Test accurate conversion between DTOs, Domain Models, and Cache Entities.
     -   **Utility functions.**
     -   **`SearchHistoryRepository` / UseCases:** Test logic for adding, retrieving, normalizing, and clearing search terms (with mocked DataStore).
-
+    -   **`HomeScreenViewModel`:** Test state management for curated photos, pagination logic for infinite scroll, refresh logic, error handling.
 -   **Expectations:**
     -   Fast execution, run on every commit locally and in CI.
     -   No Android framework dependencies (true unit tests running on JVM).
@@ -94,6 +94,14 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
         -   Animated appearance of empty/error/loading states.
         -   General screen transition animations (if custom).
         -   Performance of animations on target devices.
+    -   **HomeScreen - Trending Photos (Epic 10):**
+        -   Correct rendering of `LazyVerticalStaggeredGrid` with images from `/v1/curated`.
+        -   Functionality of infinite scrolling for trending photos.
+        -   Operation of the user-initiated "Refresh" button and subsequent data update.
+        -   Robust state handling (initial load, content, empty, error) on HomeScreen.
+        -   Dynamic column count adaptation based on `WindowSizeClass` or orientation.
+        -   Navigation from a HomeScreen image to `ImageDetailScreen`.
+        -   Appearance of shimmer effects/placeholders during loading.
 -   **Expectations:**
     -   Most expensive tests, run on emulators/devices.
     -   Focus on critical user paths and UI correctness.
@@ -128,3 +136,4 @@ The testing strategy for PexelsSample aims to ensure the application is robust, 
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft outlining the testing strategy for PexelsSample. | Architect AI |
 | Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
+| Trending Photos on HomeScreen | 2025-05-12 | 1.2     | New Features                                                                    | Architect AI |

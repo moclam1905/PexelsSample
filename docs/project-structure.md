@@ -77,10 +77,10 @@ PexelsSample/
 │   │   │  │           │   └── ImageDetailViewModel.kt (if needed)
 │   │   │  │           ├── home/             # Home/Search feature (can be one or split)
 │   │   │  │           │   ├── HomeScreen.kt
-│   │   │  │           │   └── SearchViewModel.kt
+│   │   │  │           │   └── HomeScreenViewModel.kt
 │   │   │  │           ├── results/          # Search Results feature (if distinct from home)
 │   │   │  │           │   ├── SearchResultsScreen.kt
-│   │   │  │           │   └── (SearchViewModel might be shared or a dedicated one)
+│   │   │  │           │   └── SearchViewModel.kt
 │   │   │  │           └── theme/            # Jetpack Compose Theme (Colors, Typography, Shapes)
 │   │   │  │               ├── Color.kt
 │   │   │  │               ├── Theme.kt
@@ -154,4 +154,5 @@ PexelsSample/
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft based on MVVM and Clean Arch principles. | Architect AI |
 | Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
+| Trending Photos on HomeScreen | 2025-05-12 | 1.2     | New Features                                                                    | Architect AI |
 

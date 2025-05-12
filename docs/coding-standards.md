@@ -66,6 +66,9 @@
     -   Use `remember` for storing state that survives recomposition. Use `rememberSaveable` for state that needs to survive configuration changes or process death if not handled by ViewModel.
     -   Optimize performance by minimizing unnecessary recompositions (e.g., ensure stability of Composable parameters, use lambdas for deferred execution).
     -   Preview Composables using `@Preview` annotation during development.
+    -   Ensure `key`s are provided for items in `LazyVerticalStaggeredGrid` for optimal performance and state preservation during recompositions and list changes.
+    -   Be mindful of item measurement and span configuration for performance.
+    -   Optimize image loading within grid items, considering the image size appropriate for the grid display.
     -   Refer to official Jetpack Compose guidelines: [https://developer.android.com/jetpack/compose/mental-model](https://developer.android.com/jetpack/compose/mental-model)
 
  - **Gesture Handling in Compose**
@@ -153,4 +156,5 @@
 | :------------ | :--------- | :------ | :---------------------------------------------- | :--------- |
 | Initial draft | 2025-05-08 | 0.1     | Initial draft covering key coding and pattern guidelines. | Architect AI |
 | Bonus Features | 2025-05-10 | 1.1     | Bonus Features | Architect AI |
+| Trending Photos on HomeScreen | 2025-05-12 | 1.2     | New Features                                                                    | Architect AI |
 
