@@ -22,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -44,7 +46,8 @@ fun SearchResultsListComposable(
     searchViewModel: SearchViewModel,
     onPhotoClick: (Photo) -> Unit,
     modifier: Modifier = Modifier,
-    gridCellsCount: Int = 2 // Default for smaller screens, can be adjusted
+    gridCellsCount: Int = 2, // Default for smaller screens, can be adjusted
+    snackbarHostState: SnackbarHostState
 ) {
     val photos by searchViewModel.photos.collectAsStateWithLifecycle()
     val isLoading by searchViewModel.isLoading.collectAsStateWithLifecycle()
@@ -82,6 +85,17 @@ fun SearchResultsListComposable(
         }
     }
 
+    LaunchedEffect(errorState, photos) { // Keyed on errorState and photos to react to changes
+        val currentError = errorState
+        if (currentError != null && photos.isNotEmpty()) {
+            snackbarHostState.showSnackbar(
+                message = currentError.message,
+                duration = SnackbarDuration.Short
+            )
+            searchViewModel.clearErrorState() // Clear error after showing Snackbar
+        }
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = { searchViewModel.onRefreshTriggered() }, // This onRefresh is for the Box, not the state directly
@@ -101,7 +115,7 @@ fun SearchResultsListComposable(
             isLoading && photos.isEmpty() && !isRefreshing -> { // Initial full screen loading, hide if refreshing
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
-            errorState != null && !isRefreshing -> { // Hide error if refreshing
+            errorState != null && photos.isEmpty() && !isRefreshing -> { // Show ErrorDisplay only if photos list is empty
                 ErrorDisplay(errorState, searchViewModel::retryLastFailedOperation)
             }
             isResultsEmpty && !isRefreshing -> { // Hide empty state if refreshing

@@ -18,6 +18,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,6 +27,8 @@ import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
 import com.nguyenmoclam.pexelssample.ui.detail.ImageDetailPaneComposable
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.results.SearchResultsListComposable
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +41,8 @@ fun AdaptiveSearchResultsHostScreen(
     val currentQuery by searchViewModel.searchQuery.collectAsStateWithLifecycle()
 
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Handle back press for two-pane view
     BackHandler(enabled = isExpanded && selectedPhotoForDetail != null) {
@@ -56,7 +61,8 @@ fun AdaptiveSearchResultsHostScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         if (isExpanded) {
             Row(
@@ -71,7 +77,8 @@ fun AdaptiveSearchResultsHostScreen(
                         onPhotoClick = { photo ->
                             searchViewModel.onPhotoSelected(photo)
                         },
-                        gridCellsCount = 1 // Single column for the list pane
+                        gridCellsCount = 1, // Single column for the list pane
+                        snackbarHostState = snackbarHostState
                     )
                 }
                 Box(modifier = Modifier.weight(0.6f).fillMaxHeight().padding(start = 4.dp)) { // Detail pane
@@ -89,7 +96,8 @@ fun AdaptiveSearchResultsHostScreen(
                     navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${photo.id}")
                 },
                 modifier = Modifier.padding(paddingValues),
-                gridCellsCount = if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium) 3 else 2
+                gridCellsCount = if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium) 3 else 2,
+                snackbarHostState = snackbarHostState
             )
         }
     }

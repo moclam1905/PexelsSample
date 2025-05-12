@@ -398,6 +398,11 @@ class SearchViewModel @Inject constructor(
         lastAction?.invoke()
     }
 
+    fun clearErrorState() {
+        _errorState.value = null
+        Logger.d("SearchViewModel", "Error state cleared by UI.")
+    }
+
     // Story 8.1: Pull-to-Refresh
     fun onRefreshTriggered() {
         if (_isRefreshing.value) {

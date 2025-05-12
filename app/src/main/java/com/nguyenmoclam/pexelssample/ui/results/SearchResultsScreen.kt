@@ -13,8 +13,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,10 +50,13 @@ fun SearchResultsScreen(
         else -> 2
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text(text = if (currentQuery.isNotBlank()) "Results for '$currentQuery'" else "Search Results") })
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         SearchResultsListComposable(
             searchViewModel = searchViewModel, 
@@ -58,7 +64,8 @@ fun SearchResultsScreen(
                 navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${selectedPhoto.id}")
             },
             modifier = Modifier.padding(paddingValues),
-            gridCellsCount = columnCount
+            gridCellsCount = columnCount,
+            snackbarHostState = snackbarHostState
         )
     }
 }
