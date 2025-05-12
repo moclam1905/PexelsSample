@@ -30,6 +30,7 @@ import androidx.core.graphics.toColorInt
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
+import coil.transition.CrossfadeTransition
 import com.nguyenmoclam.pexelssample.domain.model.Photo
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
@@ -47,7 +48,7 @@ fun SharedTransitionScope.ImageItem(
     val imageRequest = remember(photo.src.medium, photo.id, context) {
         ImageRequest.Builder(context)
             .data(photo.src.medium)
-            .crossfade(true)
+            .transitionFactory(CrossfadeTransition.Factory(durationMillis = 300, preferExactIntrinsicSize = true))
             .listener(
                 onStart = { _ ->
                     Log.d("ImageItem_CoilListener", "Photo ID: ${photo.id} (AsyncImage) - Coil Request Started")
