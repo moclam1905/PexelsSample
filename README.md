@@ -21,9 +21,9 @@ A native Android application built using Kotlin and Jetpack Compose, designed to
 
 The application follows the Model-View-ViewModel (MVVM) pattern with Clean Architecture principles, organized into three main layers:
 
-- **UI Layer (Presentation)**: Jetpack Compose UI components and ViewModels that manage UI state
-- **Domain Layer**: Core business logic, repository interfaces, domain models, and use cases
-- **Data Layer**: Repository implementations, API services, and local database cache
+- **UI Layer (Presentation)**: Jetpack Compose UI components and ViewModels that manage UI state. Utilizes a **Single Activity Architecture** with Jetpack Navigation Compose.
+- **Domain Layer**: Core business logic, repository interfaces, domain models, and use cases.
+- **Data Layer**: Repository implementations, API services, and local database cache.
 
 For detailed information on the architecture, see [Architecture Documentation](docs/architecture.md).
 
@@ -117,11 +117,13 @@ For comprehensive tech stack details, see [Tech Stack Documentation](docs/tech-s
 
 - **Repository Pattern**: Provides a clean API for data access to the rest of the application
 - **Use Case Pattern**: Encapsulates business logic in single-responsibility classes
-- **Immutable UI State**: ViewModels expose immutable UI state via StateFlow
-- **Unidirectional Data Flow**: UI events flow to ViewModel, state updates flow back to UI
-- **Error Handling**: Structured approach using sealed classes for typed errors
-- **Dependency Injection**: Hilt for providing dependencies throughout the application
-- **Adaptive Layouts**: Responsive UI that adapts to different screen sizes using WindowSizeClass
+- **Immutable UI State & Unidirectional Data Flow (UDF)**: ViewModels expose immutable UI state via `StateFlow`, ensuring predictable state updates.
+- **Kotlin Coroutines & Flow**: Used extensively for asynchronous operations and reactive data streams.
+- **Error Handling**: Structured approach using sealed classes (`ResultWrapper`) for typed errors and clear communication to the UI.
+- **Dependency Injection**: Hilt for providing dependencies throughout the application.
+- **Adaptive Layouts**: Responsive UI that adapts to different screen sizes using WindowSizeClass.
+- **Jetpack Compose Best Practices**: Emphasis on small, reusable Composables, state hoisting, and performance optimization.
+- **Secure API Key Management**: API keys are securely managed using `gradle.properties` and `BuildConfig`, avoiding hardcoding.
 
 For more information, see [Coding Standards Documentation](docs/coding-standards.md).
 
@@ -152,6 +154,18 @@ For more information, see [Coding Standards Documentation](docs/coding-standards
       <td>Pull-to-refresh for updating content</td>
       <td>Recent search history</td>
       <td>Basic offline capabilities</td>
+    </tr>
+    <tr>
+      <td align="center"><b>🏠 Trending HomeScreen</b></td>
+      <td align="center"><b>🎬 UI Animations</b></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>Dynamic grid of curated photos on app launch with infinite scroll & refresh.</td>
+      <td>Smooth and purposeful UI transitions and feedback enhancing user experience.</td>
+      <td></td>
+      <td></td>
     </tr>
   </table>
 </div>
@@ -255,6 +269,8 @@ The project was implemented according to the following epics:
 7. [🧪 Epic 7: Testing and Quality Assurance](docs/epic7.md)
 8. [📱 Epic 8: Adaptive Layouts](docs/epic8.md)
 9. [🕒 Epic 9: Search History](docs/epic9.md)
+10. [✨ Epic 10: Bonus Features](docs/epic10.md)
+    - *Implements an engaging HomeScreen experience with a dynamic, infinitely scrollable, and refreshable staggered grid of trending/curated photos.*
 
 ## 📚 Documentation
 
@@ -273,6 +289,7 @@ For more detailed information, refer to the following documentation:
 | [🔐 Environment Variables](docs/environment-vars.md) | [🧪 Epic 7: Testing & QA](docs/epic7.md) |
 | [🧪 Testing Strategy](docs/testing-strategy.md) | [📱 Epic 8: Adaptive Layouts](docs/epic8.md) |
 |  | [🕒 Epic 9: Search History](docs/epic9.md) |
+|  | [✨ Epic 10: Bonus Features (HomeScreen)](docs/epic10.md) |
 
 </div>
 
