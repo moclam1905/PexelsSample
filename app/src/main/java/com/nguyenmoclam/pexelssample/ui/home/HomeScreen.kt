@@ -43,12 +43,12 @@ fun SharedTransitionScope.HomeScreen(
     // Remember the grid state
     val gridState = rememberLazyStaggeredGridState()
 
-    // AC2: Adaptive padding based on window size
-    val screenPadding = when (windowSizeClass.widthSizeClass) {
-        WindowWidthSizeClass.Compact -> 16.dp
-        WindowWidthSizeClass.Medium -> 24.dp
-        WindowWidthSizeClass.Expanded -> 32.dp
-        else -> 16.dp
+    // Calculate column count based on width class (Story 10.3)
+    val columnCount = when (windowSizeClass.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> 2
+        WindowWidthSizeClass.Medium -> 3
+        WindowWidthSizeClass.Expanded -> 4
+        else -> 2 // Sensible default
     }
 
     LaunchedEffect(windowSizeClass) {
@@ -101,7 +101,7 @@ fun SharedTransitionScope.HomeScreen(
             } else if (photosList.isNotEmpty()) {
                 LazyVerticalStaggeredGrid(
                     state = gridState,
-                    columns = StaggeredGridCells.Fixed(2),
+                    columns = StaggeredGridCells.Fixed(columnCount),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 8.dp),
