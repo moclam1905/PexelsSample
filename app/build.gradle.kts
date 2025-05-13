@@ -121,4 +121,6 @@ dependencies {
     implementation(libs.androidx.animation)
     implementation(libs.androidx.animation.core)
     implementation(libs.androidx.foundation)
+
+    implementation(libs.shimmer)
 }

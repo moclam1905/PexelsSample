@@ -130,11 +130,10 @@ fun SharedTransitionScope.HomeScreen(
                     state = gridState,
                     columns = StaggeredGridCells.Fixed(columnCount),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        top = 8.dp,
-                        bottom = 8.dp
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        horizontal = 12.dp,
+                        vertical = 8.dp
                     ),
                     verticalItemSpacing = 8.dp,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -149,7 +148,8 @@ fun SharedTransitionScope.HomeScreen(
                             onItemClick = { /* TODO: Navigation to detail (Story 10.7) */ },
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            dynamicHeight = true
+                            dynamicHeight = true,
+                            applyRounding = true
                         )
                     }
 
