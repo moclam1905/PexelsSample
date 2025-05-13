@@ -56,7 +56,7 @@ class HomeScreenViewModelTest {
     @Before
     fun setUp() {
         // Provide the mocked repository before each test
-        // ViewModel will be initialized here, triggering init block
+        // ViewModel will be initialized in each test *after* mocking specific responses
     }
 
     @After
@@ -65,56 +65,198 @@ class HomeScreenViewModelTest {
     }
 
     @Test
-    fun `init loads initial photos successfully`() = runTest {
+    fun `init - loads initial photos successfully - sets Content state`() = runTest {
         // Arrange
         val dummyPhotos = listOf(createDummyPhoto(1), createDummyPhoto(2))
-        val successResult = PhotosResult.Success(photos = dummyPhotos, totalResults = 2, canLoadMore = false, nextPageUrl = null)
-        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = any()) } returns successResult
+        val successResult = PhotosResult.Success(photos = dummyPhotos, totalResults = 2, canLoadMore = false, nextPageUrl = "next_page_url")
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns successResult
 
         // Act
         viewModel = HomeScreenViewModel(imageRepository) // Initialize ViewModel AFTER mocking
+        val finalState = viewModel.uiState.value // Get the state after init
 
         // Assert
-        // runTest ensures coroutines launched in viewModelScope complete before assertions
-        assertThat(viewModel.isLoadingInitial.value).isFalse() // Check final loading state
-        assertThat(viewModel.photos.value).isEqualTo(dummyPhotos) // Check final photos state
+        assertThat(finalState).isInstanceOf(HomeScreenUiState.Content::class.java)
+        val contentState = finalState as HomeScreenUiState.Content
+        assertThat(contentState.photos).isEqualTo(dummyPhotos)
+        assertThat(viewModel.nextPageUrl.value).isEqualTo("next_page_url") // Check if next page URL is set
 
-        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = any()) }
+        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
     }
 
     @Test
-    fun `init handles repository error during initial load`() = runTest {
+    fun `init - loads initial photos successfully with empty list - sets Empty state`() = runTest {
         // Arrange
-        val errorResult = PhotosResult.Error(message = "Network Error", isRetryable = true)
-        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = any()) } returns errorResult
+        val emptyPhotos = emptyList<Photo>()
+        val successResult = PhotosResult.Success(photos = emptyPhotos, totalResults = 0, canLoadMore = false, nextPageUrl = null)
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns successResult
 
         // Act
         viewModel = HomeScreenViewModel(imageRepository)
+        val finalState = viewModel.uiState.value
 
         // Assert
-        assertThat(viewModel.isLoadingInitial.value).isFalse()
-        assertThat(viewModel.photos.value).isEmpty() // Photos should remain/be empty on error
+        assertThat(finalState).isEqualTo(HomeScreenUiState.Empty)
+        assertThat(viewModel.nextPageUrl.value).isNull() // Should be null if empty
 
-        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = any()) }
-        // Assert error state handling here once implemented in ViewModel (Story 10.6)
+        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
     }
 
     @Test
-    fun `init handles exception during initial load`() = runTest {
+    fun `init - handles repository error during initial load - sets Error state`() = runTest {
         // Arrange
-        val exception = RuntimeException("Something went wrong")
-        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = any()) } throws exception
+        val errorMessage = "Network Error"
+        val errorResult = PhotosResult.Error(message = errorMessage, isRetryable = true)
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns errorResult
 
         // Act
         viewModel = HomeScreenViewModel(imageRepository)
+        val finalState = viewModel.uiState.value
 
         // Assert
-        assertThat(viewModel.isLoadingInitial.value).isFalse()
-        assertThat(viewModel.photos.value).isEmpty() // Photos should remain/be empty on exception
+        assertThat(finalState).isInstanceOf(HomeScreenUiState.Error::class.java)
+        val errorState = finalState as HomeScreenUiState.Error
+        assertThat(errorState.errorDetails.message).contains(errorMessage)
+        assertThat(errorState.errorDetails.isRetryable).isTrue()
+        assertThat(viewModel.nextPageUrl.value).isNull()
 
-        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = any()) }
-        // Assert error state handling here once implemented in ViewModel (Story 10.6)
+        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
     }
+
+    @Test
+    fun `init - handles exception during initial load - sets Error state`() = runTest {
+        // Arrange
+        val exceptionMessage = "Something went wrong"
+        val exception = RuntimeException(exceptionMessage)
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } throws exception
+
+        // Act
+        viewModel = HomeScreenViewModel(imageRepository)
+        val finalState = viewModel.uiState.value
+
+        // Assert
+        assertThat(finalState).isInstanceOf(HomeScreenUiState.Error::class.java)
+        val errorState = finalState as HomeScreenUiState.Error
+        assertThat(errorState.errorDetails.message).contains("unexpected error") // Check generic message
+        assertThat(errorState.errorDetails.isRetryable).isTrue()
+        assertThat(viewModel.nextPageUrl.value).isNull()
+
+        coVerify(exactly = 1) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
+    }
+
+    @Test
+    fun `fetchInitialPhotos called from Error state - retries successfully`() = runTest {
+        // Arrange: Setup initial error state
+        val errorMessage = "Initial Network Error"
+        val errorResult = PhotosResult.Error(message = errorMessage, isRetryable = true)
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns errorResult
+        viewModel = HomeScreenViewModel(imageRepository)
+        assertThat(viewModel.uiState.value).isInstanceOf(HomeScreenUiState.Error::class.java)
+
+        // Arrange: Mock successful retry response
+        val retryPhotos = listOf(createDummyPhoto(3))
+        val successRetryResult = PhotosResult.Success(photos = retryPhotos, totalResults = 1, canLoadMore = false, nextPageUrl = "retry_next_page")
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns successRetryResult
+
+        // Act: Call retry function
+        viewModel.fetchInitialPhotos()
+        val finalState = viewModel.uiState.value
+
+        // Assert: Check final state is Content
+        assertThat(finalState).isInstanceOf(HomeScreenUiState.Content::class.java)
+        val contentState = finalState as HomeScreenUiState.Content
+        assertThat(contentState.photos).isEqualTo(retryPhotos)
+        assertThat(viewModel.nextPageUrl.value).isEqualTo("retry_next_page")
+
+        // Verify repository called twice (initial load + retry)
+        coVerify(exactly = 2) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
+    }
+
+    @Test
+    fun `onManualRefreshTriggered - success - sets Loading then Content state`() = runTest {
+        // Arrange: Setup initial Content state (optional, could start from any non-loading state)
+        val initialPhotos = listOf(createDummyPhoto(1))
+        val initialSuccess = PhotosResult.Success(initialPhotos, 1, false, "initial_url")
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns initialSuccess
+        viewModel = HomeScreenViewModel(imageRepository)
+        assertThat(viewModel.uiState.value).isInstanceOf(HomeScreenUiState.Content::class.java)
+
+        // Arrange: Mock successful refresh response
+        val refreshedPhotos = listOf(createDummyPhoto(10), createDummyPhoto(11))
+        val refreshSuccess = PhotosResult.Success(refreshedPhotos, 2, false, "refresh_url")
+        // Make sure the mock is set for the *next* call
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns refreshSuccess
+
+        // Act
+        viewModel.onManualRefreshTriggered()
+        // Note: State might briefly be InitialLoading during the refresh
+        val finalState = viewModel.uiState.value // Get state after refresh completes
+
+        // Assert
+        assertThat(viewModel.isRefreshingManual.value).isFalse() // Refreshing flag should be reset
+        assertThat(finalState).isInstanceOf(HomeScreenUiState.Content::class.java)
+        val contentState = finalState as HomeScreenUiState.Content
+        assertThat(contentState.photos).isEqualTo(refreshedPhotos)
+        assertThat(viewModel.nextPageUrl.value).isEqualTo("refresh_url")
+
+        coVerify(exactly = 2) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } // Initial + Refresh
+    }
+
+    @Test
+    fun `onManualRefreshTriggered - empty result - sets Loading then Empty state`() = runTest {
+        // Arrange: Start with Content
+        val initialPhotos = listOf(createDummyPhoto(1))
+        val initialSuccess = PhotosResult.Success(initialPhotos, 1, false, "initial_url")
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns initialSuccess
+        viewModel = HomeScreenViewModel(imageRepository)
+        assertThat(viewModel.uiState.value).isInstanceOf(HomeScreenUiState.Content::class.java)
+
+        // Arrange: Mock empty refresh response
+        val emptyResult = PhotosResult.Success(emptyList(), 0, false, null)
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns emptyResult
+
+        // Act
+        viewModel.onManualRefreshTriggered()
+        val finalState = viewModel.uiState.value
+
+        // Assert
+        assertThat(viewModel.isRefreshingManual.value).isFalse()
+        assertThat(finalState).isEqualTo(HomeScreenUiState.Empty)
+        assertThat(viewModel.nextPageUrl.value).isNull()
+
+        coVerify(exactly = 2) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
+    }
+
+    @Test
+    fun `onManualRefreshTriggered - error - sets Loading then Error state`() = runTest {
+        // Arrange: Start with Content
+        val initialPhotos = listOf(createDummyPhoto(1))
+        val initialSuccess = PhotosResult.Success(initialPhotos, 1, false, "initial_url")
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns initialSuccess
+        viewModel = HomeScreenViewModel(imageRepository)
+        assertThat(viewModel.uiState.value).isInstanceOf(HomeScreenUiState.Content::class.java)
+
+        // Arrange: Mock error refresh response
+        val errorMsg = "Refresh Failed"
+        val errorResult = PhotosResult.Error(errorMsg, true)
+        coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) } returns errorResult
+
+        // Act
+        viewModel.onManualRefreshTriggered()
+        val finalState = viewModel.uiState.value
+
+        // Assert
+        assertThat(viewModel.isRefreshingManual.value).isFalse()
+        assertThat(finalState).isInstanceOf(HomeScreenUiState.Error::class.java)
+        val errorState = finalState as HomeScreenUiState.Error
+        assertThat(errorState.errorDetails.message).contains(errorMsg)
+        assertThat(errorState.errorDetails.isRetryable).isTrue()
+        assertThat(viewModel.nextPageUrl.value).isNull()
+
+        coVerify(exactly = 2) { imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE) }
+    }
+
+    // TODO: Add tests for loadMorePhotos behavior with HomeScreenUiState.Content if needed
 
 }
 
