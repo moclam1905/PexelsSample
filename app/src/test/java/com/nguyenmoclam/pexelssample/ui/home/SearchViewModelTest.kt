@@ -83,7 +83,7 @@ class SearchViewModelTest {
 
     @Test
     fun `onRefreshTriggered sets isRefreshing to true`() = mainCoroutineRule.runBlockingTest {
-        coEvery { imageRepository.getCuratedPhotos(1, 20) } returns PhotosResult.Success(emptyList(), 0, false)
+        coEvery { imageRepository.getCuratedPhotos(1, 20) } returns PhotosResult.Success(emptyList(), 0, false, null)
 
         viewModel.isRefreshing.test {
             assertThat(awaitItem()).isFalse()
@@ -119,7 +119,7 @@ class SearchViewModelTest {
     @Test
     fun `onSearchClicked with non-blank query calls imageRepository searchPhotos`() = mainCoroutineRule.runBlockingTest {
         val query = "nature"
-        val mockSuccessResult = PhotosResult.Success(photos = emptyList(), totalResults = 0, canLoadMore = false)
+        val mockSuccessResult = PhotosResult.Success(photos = emptyList(), totalResults = 0, canLoadMore = false, nextPageUrl = null)
         coEvery { imageRepository.searchPhotos(query, 1, 20) } returns mockSuccessResult
 
         viewModel.onQueryChanged(query)
@@ -141,7 +141,7 @@ class SearchViewModelTest {
     @Test
     fun `onSearchClicked with non-blank query success, isLoading is true then false`() = mainCoroutineRule.runBlockingTest {
         val query = "nature"
-        val mockSuccessResult = PhotosResult.Success(emptyList(), 0, false)
+        val mockSuccessResult = PhotosResult.Success(emptyList(), 0, false, null)
         coEvery { imageRepository.searchPhotos(query, 1, 20) } returns mockSuccessResult
 
         viewModel.onQueryChanged(query)
@@ -202,7 +202,8 @@ class SearchViewModelTest {
         val successResult = PhotosResult.Success(
             photos = photosPage1,
             totalResults = 10,
-            canLoadMore = true
+            canLoadMore = true,
+            null
         )
 
         coEvery { imageRepository.searchPhotos(query, 1, 20) } returns successResult
@@ -223,7 +224,8 @@ class SearchViewModelTest {
         val successResult = PhotosResult.Success(
             photos = listOf(mockPhoto1),
             totalResults = 10,
-            canLoadMore = true
+            canLoadMore = true,
+            null
         )
         coEvery { imageRepository.searchPhotos(query, 1, 20) } returns successResult
 

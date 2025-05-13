@@ -68,7 +68,7 @@ class HomeScreenViewModelTest {
     fun `init loads initial photos successfully`() = runTest {
         // Arrange
         val dummyPhotos = listOf(createDummyPhoto(1), createDummyPhoto(2))
-        val successResult = PhotosResult.Success(photos = dummyPhotos, totalResults = 2, canLoadMore = false)
+        val successResult = PhotosResult.Success(photos = dummyPhotos, totalResults = 2, canLoadMore = false, nextPageUrl = null)
         coEvery { imageRepository.getCuratedPhotos(page = 1, perPage = any()) } returns successResult
 
         // Act

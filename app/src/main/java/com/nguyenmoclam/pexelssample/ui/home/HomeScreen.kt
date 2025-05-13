@@ -4,26 +4,14 @@ import android.util.Log
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,8 +20,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.nguyenmoclam.pexelssample.core.navigation.ScreenRoutes
 import com.nguyenmoclam.pexelssample.ui.common.ImageItem
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.debounce
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, FlowPreview::class)
 @Composable
 fun SharedTransitionScope.HomeScreen(
     navController: NavController,
@@ -44,6 +36,12 @@ fun SharedTransitionScope.HomeScreen(
 ) {
     val photosList by viewModel.photos.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingInitial.collectAsStateWithLifecycle()
+    val isLoadingNextPage by viewModel.isLoadingNextPage.collectAsStateWithLifecycle()
+    val nextPageUrl by viewModel.nextPageUrl.collectAsStateWithLifecycle()
+    val paginationErrorString by viewModel.paginationError.collectAsStateWithLifecycle()
+
+    // Remember the grid state
+    val gridState = rememberLazyStaggeredGridState()
 
     // AC2: Adaptive padding based on window size
     val screenPadding = when (windowSizeClass.widthSizeClass) {
@@ -55,6 +53,25 @@ fun SharedTransitionScope.HomeScreen(
 
     LaunchedEffect(windowSizeClass) {
         Log.d("HomeScreen", "WindowSizeClass updated: Width=${windowSizeClass.widthSizeClass}, Height=${windowSizeClass.heightSizeClass}")
+    }
+
+    LaunchedEffect(Unit) { // Run once to set up the collector
+        snapshotFlow {
+            val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val currentPhotosSize = photosList.size // Access photosList state here
+            val buffer = 5
+            lastVisibleItem != null && currentPhotosSize > 0 && lastVisibleItem.index >= currentPhotosSize - 1 - buffer
+        }
+            .distinctUntilChanged() // Only emit when the near-end state changes
+            .filter { isNearEnd -> isNearEnd } // Only react when it becomes true
+            .debounce(300L)
+            .collect {
+                // Check other conditions when near-end becomes true
+                if (nextPageUrl != null && !isLoading && !isLoadingNextPage && paginationErrorString == null) {
+                    Log.d("HomeScreenScroll", ">>> Calling loadNextCuratedPage (Triggered by isNearEnd becoming true) <<<")
+                    viewModel.loadMorePhotos()
+                }
+            }
     }
 
     Scaffold(
@@ -83,6 +100,7 @@ fun SharedTransitionScope.HomeScreen(
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (photosList.isNotEmpty()) {
                 LazyVerticalStaggeredGrid(
+                    state = gridState,
                     columns = StaggeredGridCells.Fixed(2),
                     modifier = Modifier
                         .fillMaxSize()
@@ -102,12 +120,45 @@ fun SharedTransitionScope.HomeScreen(
                         ImageItem(
                             photo = photo,
                             onItemClick = { /* TODO: Navigation to detail (Story 10.7) */ },
-                            sharedTransitionScope = this@HomeScreen,
+                            sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             dynamicHeight = true
                         )
                     }
 
+                    // Loading indicator item (AC3)
+                    if (isLoadingNextPage) {
+                        item(span = StaggeredGridItemSpan.FullLine) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+
+                    // Pagination error item (AC6)
+                    paginationErrorString?.let { errorMessage ->
+                        if (!isLoadingNextPage && nextPageUrl != null) { // Don't show error if we are currently loading
+                            item(span = StaggeredGridItemSpan.FullLine) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(errorMessage, color = MaterialTheme.colorScheme.error)
+                                    Button(onClick = { viewModel.loadMorePhotos() }) {
+                                        Text("Retry")
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

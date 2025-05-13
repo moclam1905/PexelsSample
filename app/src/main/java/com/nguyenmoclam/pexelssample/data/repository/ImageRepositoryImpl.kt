@@ -22,7 +22,8 @@ class ImageRepositoryImpl @Inject constructor(
                 PhotosResult.Success(
                     photos = body.photos.map { it.toDomain() },
                     totalResults = body.totalResults,
-                    canLoadMore = body.nextPage != null
+                    canLoadMore = body.nextPage != null,
+                    nextPageUrl = body.nextPage
                 )
             } else {
                 val errorMsg = "API Error ${response.code()}: ${response.message()} - ${response.errorBody()?.string()}"
@@ -46,19 +47,16 @@ class ImageRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getCuratedPhotos(page: Int, perPage: Int): PhotosResult {
-         // Note: Pexels curated endpoint might not support pagination via 'page' param in the free tier,
-         // it uses 'per_page'. The 'getCuratedPhotosTest' currently only takes perPage.
-         // We pass 'page' for interface consistency, but the actual API call might ignore it.
-         // Adjusting API call based on PexelsApiService definition.
         return try {
             // Using getCuratedPhotosTest which only takes perPage, ignoring the 'page' parameter for now.
-            val response = apiService.getCuratedPhotosTest(perPage = perPage)
+            val response = apiService.getCuratedPhotos(page = page, perPage = perPage)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
                 PhotosResult.Success(
                     photos = body.photos.map { it.toDomain() },
                     totalResults = body.totalResults,
-                    canLoadMore = body.nextPage != null // Curated API might not have nextPage reliably
+                    canLoadMore = body.nextPage != null,
+                    nextPageUrl = body.nextPage
                 )
             } else {
                 val errorMsg = "API Error ${response.code()}: ${response.message()} - ${response.errorBody()?.string()}"
@@ -80,4 +78,37 @@ class ImageRepositoryImpl @Inject constructor(
             PhotosResult.Error(message = "An unexpected error occurred.", isRetryable = true)
         }
     }
+
+    override suspend fun getPhotosFromUrl(url: String): PhotosResult {
+        return try {
+            val response = apiService.getPhotosFromUrl(url = url)
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                PhotosResult.Success(
+                    photos = body.photos.map { it.toDomain() },
+                    totalResults = body.totalResults,
+                    canLoadMore = body.nextPage != null,
+                    nextPageUrl = body.nextPage
+                )
+            } else {
+                val errorMsg = "API Error ${response.code()}: ${response.message()} - ${response.errorBody()?.string()}"
+                Logger.e("ImageRepositoryImpl", errorMsg)
+                val userMessage = when(response.code()) {
+                    401, 403 -> "Authentication error."
+                    404 -> "Resource not found (invalid URL?)"
+                    429 -> "Rate limit exceeded. Please try again later."
+                    in 500..599 -> "Server error (${response.code()}). Please try again later."
+                    else -> "Failed to get photos from URL (Error ${response.code()})."
+                }
+                PhotosResult.Error(message = userMessage, isRetryable = response.code() >= 500 || response.code() == 429 || response.code() == 404) // Cân nhắc retry 404?
+            }
+        } catch (e: IOException) {
+            Logger.e("ImageRepositoryImpl", "Network error getting photos from URL: ${e.message}", e)
+            PhotosResult.Error(message = "Network error. Please check connection.", isRetryable = true)
+        } catch (e: Exception) {
+            Logger.e("ImageRepositoryImpl", "Unknown error getting photos from URL: ${e.message}", e)
+            PhotosResult.Error(message = "An unexpected error occurred.", isRetryable = true)
+        }
+    }
+
 } 

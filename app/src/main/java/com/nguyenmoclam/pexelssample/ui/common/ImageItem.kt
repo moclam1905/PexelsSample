@@ -50,20 +50,6 @@ fun SharedTransitionScope.ImageItem(
         ImageRequest.Builder(context)
             .data(photo.src.medium)
             .transitionFactory(CrossfadeTransition.Factory(durationMillis = 300, preferExactIntrinsicSize = dynamicHeight))
-            .listener(
-                onStart = { _ ->
-                    Log.d("ImageItem_CoilListener", "Photo ID: ${photo.id} (AsyncImage) - Coil Request Started")
-                },
-                onSuccess = { _, result ->
-                    Log.d("ImageItem_CoilListener", "Photo ID: ${photo.id} (AsyncImage) - Coil Request Success. Metadata: ${result.memoryCacheKey}, ${result.diskCacheKey}, ${result.dataSource}")
-                },
-                onError = { _, result ->
-                    Log.e("ImageItem_CoilListener", "Photo ID: ${photo.id} (AsyncImage) - Coil Request Error", result.throwable)
-                },
-                onCancel = { _ ->
-                    Log.d("ImageItem_CoilListener", "Photo ID: ${photo.id} (AsyncImage) - Coil Request Cancelled")
-                }
-            )
             .build()
     }
 
