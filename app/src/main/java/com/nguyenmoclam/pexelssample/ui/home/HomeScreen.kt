@@ -163,7 +163,9 @@ fun SharedTransitionScope.HomeScreen(
                                 val photo = photosList[index]
                                 ImageItem(
                                     photo = photo,
-                                    onItemClick = { /* TODO: Story 10.7 */ },
+                                    onItemClick = { clickedPhoto ->
+                                        navController.navigate(ScreenRoutes.IMAGE_DETAIL + "/${clickedPhoto.id}")
+                                    },
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     dynamicHeight = true,

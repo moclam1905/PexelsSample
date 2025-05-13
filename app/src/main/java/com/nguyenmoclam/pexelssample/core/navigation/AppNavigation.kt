@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.nguyenmoclam.pexelssample.ui.detail.ImageDetailScreen
 import com.nguyenmoclam.pexelssample.ui.home.HomeScreen
+import com.nguyenmoclam.pexelssample.ui.home.HomeScreenViewModel
 import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import com.nguyenmoclam.pexelssample.ui.results.SearchResultsScreen
 import com.nguyenmoclam.pexelssample.ui.adaptive.AdaptiveSearchResultsHostScreen
@@ -28,6 +29,7 @@ import com.nguyenmoclam.pexelssample.ui.adaptive.AdaptiveSearchResultsHostScreen
 fun AppNavigation(windowSizeClass: WindowSizeClass) {
     val navController = rememberNavController()
     val searchViewModel: SearchViewModel = hiltViewModel()
+    val homeScreenViewModel: HomeScreenViewModel = hiltViewModel()
 
     // Define default transitions
     val subtleFadeEnter = fadeIn(animationSpec = tween(durationMillis = 250))
@@ -80,6 +82,7 @@ fun AppNavigation(windowSizeClass: WindowSizeClass) {
                     ImageDetailScreen(
                         navController = navController,
                         photoId = photoId,
+                        homeScreenViewModel = homeScreenViewModel,
                         searchViewModel = searchViewModel,
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable

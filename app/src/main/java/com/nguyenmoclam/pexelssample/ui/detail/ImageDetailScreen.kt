@@ -45,12 +45,14 @@ import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.nguyenmoclam.pexelssample.domain.model.Photo
+import com.nguyenmoclam.pexelssample.ui.common.ErrorView
 import com.nguyenmoclam.pexelssample.ui.common.parseColor
-import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import android.content.res.Configuration
+import com.nguyenmoclam.pexelssample.ui.home.HomeScreenViewModel
+import com.nguyenmoclam.pexelssample.ui.home.SearchViewModel
 
 private const val MIN_SCALE = 1.0f
 private const val MAX_SCALE = 3.0f // Example: Max zoom 3x
@@ -66,22 +68,24 @@ var SemanticsPropertyReceiver.imageScale by ImageScale
 fun SharedTransitionScope.ImageDetailScreen(
     navController: NavController,
     photoId: Int,
-    searchViewModel: SearchViewModel = hiltViewModel(),
     imageDetailViewModel: ImageDetailViewModel = hiltViewModel(),
+    homeScreenViewModel: HomeScreenViewModel = hiltViewModel(),
+    searchViewModel: SearchViewModel = hiltViewModel(),
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    var localPhoto by remember { mutableStateOf<Photo?>(null) }
+    val uiState by imageDetailViewModel.uiState.collectAsStateWithLifecycle()
+    val photoFromVM = uiState.photo
 
-    LaunchedEffect(photoId, searchViewModel) {
-        localPhoto = searchViewModel.getPhotoById(photoId)
+    LaunchedEffect(photoId, homeScreenViewModel, searchViewModel, imageDetailViewModel) {
+        imageDetailViewModel.signalLoadingPhoto()
+        var foundPhoto: Photo? = null
+        foundPhoto = homeScreenViewModel.getPhotoById(photoId)
+        if (foundPhoto == null) {
+            foundPhoto = searchViewModel.getPhotoById(photoId)
+        }
+        imageDetailViewModel.setPhotoDetails(foundPhoto)
     }
-
-    LaunchedEffect(localPhoto, imageDetailViewModel) {
-        imageDetailViewModel.setPhotoDetails(localPhoto)
-    }
-
-    val photoFromVM by imageDetailViewModel.photo.collectAsStateWithLifecycle()
 
     val targetScale by imageDetailViewModel.scale.collectAsStateWithLifecycle()
     val targetOffsetX by imageDetailViewModel.offsetX.collectAsStateWithLifecycle()
@@ -151,7 +155,7 @@ fun SharedTransitionScope.ImageDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(photoFromVM?.photographer?.let { "Photo by $it" } ?: "Image Detail") },
+                title = { Text(photoFromVM?.photographer?.let { "Photo by $it" } ?: if (uiState.isLoading) "Loading..." else "Image Detail") },
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.popBackStack() },
@@ -163,201 +167,226 @@ fun SharedTransitionScope.ImageDetailScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
         ) {
-            if (photoFromVM != null) {
-                val currentPhoto = photoFromVM!!
-                val uriHandler = LocalUriHandler.current
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                if (photoFromVM != null) {
+                    val currentPhoto = photoFromVM
+                    val uriHandler = LocalUriHandler.current
 
-                val aspectRatio = if (currentPhoto.height > 0) currentPhoto.width.toFloat() / currentPhoto.height.toFloat() else 1f
+                    val aspectRatio = if (currentPhoto.height > 0) currentPhoto.width.toFloat() / currentPhoto.height.toFloat() else 1f
 
-                SubcomposeAsyncImage(
-                    model = currentPhoto.src.large2x,
-                    contentDescription = currentPhoto.alt.ifBlank { "Full image by ${currentPhoto.photographer}" },
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .let { mod ->
-                            if (isLandscape) {
-                                mod.height(240.dp) // Fixed height in landscape mode
-                            } else {
-                                mod.aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                    SubcomposeAsyncImage(
+                        model = currentPhoto.src.large2x,
+                        contentDescription = currentPhoto.alt.ifBlank { "Full image by ${currentPhoto.photographer}" },
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { mod ->
+                                if (isLandscape) {
+                                    mod.height(240.dp) // Fixed height in landscape mode
+                                } else {
+                                    mod.aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                                }
                             }
-                        }
-                        .then(
-                            if (!isLandscape) { // Only apply if NOT landscape (i.e., portrait)
-                                Modifier.sharedElement(
-                                    sharedContentState = sharedTransitionScope.rememberSharedContentState(key = "image-${currentPhoto.id}"),
-                                    animatedVisibilityScope = animatedVisibilityScope
+                            .then(
+                                if (!isLandscape) { // Only apply if NOT landscape (i.e., portrait)
+                                    Modifier.sharedElement(
+                                        sharedContentState = sharedTransitionScope.rememberSharedContentState(key = "image-${photoFromVM.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .testTag("zoomableImage")
+                            .semantics { this.imageScale = scaleAnimatable.value }
+                            .onSizeChanged { newSize ->
+                                layoutSize = newSize
+                            }
+                            .pointerInput(imageDetailViewModel, contentRenderedWidth, contentRenderedHeight, layoutSize) {
+                                detectTapGestures(
+                                    onDoubleTap = { tapOffset ->
+                                        if (layoutSize == IntSize.Zero || contentRenderedWidth == 0f || contentRenderedHeight == 0f) return@detectTapGestures
+
+                                        val viewWidth = layoutSize.width.toFloat()
+                                        val viewHeight = layoutSize.height.toFloat()
+
+                                        val currentActualScale = scaleAnimatable.value
+                                        val minScale = imageDetailViewModel.minScale
+                                        val maxScale = imageDetailViewModel.maxScale
+                                        val intermediateScale = (minScale * INTERMEDIATE_SCALE_FACTOR).coerceAtMost(maxScale)
+
+                                        val targetScaleValue: Float
+                                        val targetOffsetXValue: Float
+                                        val targetOffsetYValue: Float
+
+                                        if (abs(currentActualScale - minScale) < 0.01f) { // Zoom In
+                                            targetScaleValue = intermediateScale
+                                            targetOffsetXValue = offsetXAnimatable.value * (targetScaleValue / currentActualScale) - (tapOffset.x - viewWidth / 2f) * (targetScaleValue / currentActualScale - 1)
+                                            targetOffsetYValue = offsetYAnimatable.value * (targetScaleValue / currentActualScale) - (tapOffset.y - viewHeight / 2f) * (targetScaleValue / currentActualScale - 1)
+                                        } else { // Zoom Out
+                                            targetScaleValue = minScale
+                                            targetOffsetXValue = 0f
+                                            targetOffsetYValue = 0f
+                                        }
+                                        
+                                        val effectiveContentWidth = contentRenderedWidth * targetScaleValue
+                                        val effectiveContentHeight = contentRenderedHeight * targetScaleValue
+                                        val maxPanX = if (effectiveContentWidth > viewWidth) (effectiveContentWidth - viewWidth) / 2f else 0f
+                                        val maxPanY = if (effectiveContentHeight > viewHeight) (effectiveContentHeight - viewHeight) / 2f else 0f
+
+                                        val clampedTargetOffsetX = targetOffsetXValue.coerceIn(-maxPanX, maxPanX)
+                                        val clampedTargetOffsetY = targetOffsetYValue.coerceIn(-maxPanY, maxPanY)
+                                        
+                                        val finalTargetOffsetX = if (effectiveContentWidth <= viewWidth) 0f else clampedTargetOffsetX
+                                        val finalTargetOffsetY = if (effectiveContentHeight <= viewHeight) 0f else clampedTargetOffsetY
+
+                                        imageDetailViewModel.onDoubleTap(
+                                            currentScale = currentActualScale,
+                                            currentOffsetX = offsetXAnimatable.value,
+                                            currentOffsetY = offsetYAnimatable.value,
+                                            targetScaleValue = targetScaleValue,
+                                            targetOffsetXValue = finalTargetOffsetX,
+                                            targetOffsetYValue = finalTargetOffsetY
+                                        )
+                                    }
                                 )
-                            } else {
-                                Modifier
                             }
-                        )
-                        .testTag("zoomableImage")
-                        .semantics { this.imageScale = scaleAnimatable.value }
-                        .onSizeChanged { newSize ->
-                            layoutSize = newSize
-                        }
-                        .pointerInput(imageDetailViewModel, contentRenderedWidth, contentRenderedHeight, layoutSize) {
-                            detectTapGestures(
-                                onDoubleTap = { tapOffset ->
-                                    if (layoutSize == IntSize.Zero || contentRenderedWidth == 0f || contentRenderedHeight == 0f) return@detectTapGestures
+                            .graphicsLayer(
+                                scaleX = scaleAnimatable.value,
+                                scaleY = scaleAnimatable.value,
+                                translationX = offsetXAnimatable.value,
+                                translationY = offsetYAnimatable.value
+                            )
+                            .pointerInput(imageDetailViewModel, contentRenderedWidth, contentRenderedHeight, layoutSize) {
+                                detectTransformGestures { centroid, pan, zoom, rotation ->
+                                    if (layoutSize == IntSize.Zero || contentRenderedWidth == 0f || contentRenderedHeight == 0f) {
+                                        return@detectTransformGestures
+                                    }
 
                                     val viewWidth = layoutSize.width.toFloat()
                                     val viewHeight = layoutSize.height.toFloat()
-
-                                    val currentActualScale = scaleAnimatable.value
                                     val minScale = imageDetailViewModel.minScale
                                     val maxScale = imageDetailViewModel.maxScale
-                                    val intermediateScale = (minScale * INTERMEDIATE_SCALE_FACTOR).coerceAtMost(maxScale)
 
-                                    val targetScaleValue: Float
-                                    val targetOffsetXValue: Float
-                                    val targetOffsetYValue: Float
+                                    val currentStableScale = imageDetailViewModel.scale.value
+                                    val currentStableOffsetX = imageDetailViewModel.offsetX.value
+                                    val currentStableOffsetY = imageDetailViewModel.offsetY.value
 
-                                    if (abs(currentActualScale - minScale) < 0.01f) { // Zoom In
-                                        targetScaleValue = intermediateScale
-                                        targetOffsetXValue = offsetXAnimatable.value * (targetScaleValue / currentActualScale) - (tapOffset.x - viewWidth / 2f) * (targetScaleValue / currentActualScale - 1)
-                                        targetOffsetYValue = offsetYAnimatable.value * (targetScaleValue / currentActualScale) - (tapOffset.y - viewHeight / 2f) * (targetScaleValue / currentActualScale - 1)
-                                    } else { // Zoom Out
-                                        targetScaleValue = minScale
-                                        targetOffsetXValue = 0f
-                                        targetOffsetYValue = 0f
+                                    val newScale = (currentStableScale * zoom).coerceIn(minScale, maxScale)
+                                    
+                                    val oldScaleForFormula = currentStableScale 
+
+                                    var newOffsetX = currentStableOffsetX * (newScale / oldScaleForFormula) - (centroid.x - viewWidth / 2f) * (newScale / oldScaleForFormula - 1) + pan.x
+                                    var newOffsetY = currentStableOffsetY * (newScale / oldScaleForFormula) - (centroid.y - viewHeight / 2f) * (newScale / oldScaleForFormula - 1) + pan.y
+
+                                    if (abs(newScale - minScale) < 0.01f) {
+                                        newOffsetX = 0f
+                                        newOffsetY = 0f
+                                    } else {
+                                        val scaledContentActualWidth = contentRenderedWidth * newScale
+                                        val scaledContentActualHeight = contentRenderedHeight * newScale
+
+                                        val maxPanX = if (scaledContentActualWidth > viewWidth) (scaledContentActualWidth - viewWidth) / 2f else 0f
+                                        val maxPanY = if (scaledContentActualHeight > viewHeight) (scaledContentActualHeight - viewHeight) / 2f else 0f
+
+                                        newOffsetX = newOffsetX.coerceIn(-maxPanX, maxPanX)
+                                        newOffsetY = newOffsetY.coerceIn(-maxPanY, maxPanY)
+
+                                        if (scaledContentActualWidth <= viewWidth) newOffsetX = 0f
+                                        if (scaledContentActualHeight <= viewHeight) newOffsetY = 0f
                                     }
                                     
-                                    val effectiveContentWidth = contentRenderedWidth * targetScaleValue
-                                    val effectiveContentHeight = contentRenderedHeight * targetScaleValue
-                                    val maxPanX = if (effectiveContentWidth > viewWidth) (effectiveContentWidth - viewWidth) / 2f else 0f
-                                    val maxPanY = if (effectiveContentHeight > viewHeight) (effectiveContentHeight - viewHeight) / 2f else 0f
+                                    imageDetailViewModel.updateTransform(newScale, newOffsetX, newOffsetY)
 
-                                    val clampedTargetOffsetX = targetOffsetXValue.coerceIn(-maxPanX, maxPanX)
-                                    val clampedTargetOffsetY = targetOffsetYValue.coerceIn(-maxPanY, maxPanY)
-                                    
-                                    val finalTargetOffsetX = if (effectiveContentWidth <= viewWidth) 0f else clampedTargetOffsetX
-                                    val finalTargetOffsetY = if (effectiveContentHeight <= viewHeight) 0f else clampedTargetOffsetY
-
-                                    imageDetailViewModel.onDoubleTap(
-                                        currentScale = currentActualScale,
-                                        currentOffsetX = offsetXAnimatable.value,
-                                        currentOffsetY = offsetYAnimatable.value,
-                                        targetScaleValue = targetScaleValue,
-                                        targetOffsetXValue = finalTargetOffsetX,
-                                        targetOffsetYValue = finalTargetOffsetY
-                                    )
-                                }
-                            )
-                        }
-                        .graphicsLayer(
-                            scaleX = scaleAnimatable.value,
-                            scaleY = scaleAnimatable.value,
-                            translationX = offsetXAnimatable.value,
-                            translationY = offsetYAnimatable.value
-                        )
-                        .pointerInput(imageDetailViewModel, contentRenderedWidth, contentRenderedHeight, layoutSize) {
-                            detectTransformGestures { centroid, pan, zoom, rotation ->
-                                if (layoutSize == IntSize.Zero || contentRenderedWidth == 0f || contentRenderedHeight == 0f) {
-                                    return@detectTransformGestures
-                                }
-
-                                val viewWidth = layoutSize.width.toFloat()
-                                val viewHeight = layoutSize.height.toFloat()
-                                val minScale = imageDetailViewModel.minScale
-                                val maxScale = imageDetailViewModel.maxScale
-
-                                val currentStableScale = imageDetailViewModel.scale.value
-                                val currentStableOffsetX = imageDetailViewModel.offsetX.value
-                                val currentStableOffsetY = imageDetailViewModel.offsetY.value
-
-                                val newScale = (currentStableScale * zoom).coerceIn(minScale, maxScale)
-                                
-                                val oldScaleForFormula = currentStableScale 
-
-                                var newOffsetX = currentStableOffsetX * (newScale / oldScaleForFormula) - (centroid.x - viewWidth / 2f) * (newScale / oldScaleForFormula - 1) + pan.x
-                                var newOffsetY = currentStableOffsetY * (newScale / oldScaleForFormula) - (centroid.y - viewHeight / 2f) * (newScale / oldScaleForFormula - 1) + pan.y
-
-                                if (abs(newScale - minScale) < 0.01f) {
-                                    newOffsetX = 0f
-                                    newOffsetY = 0f
-                                } else {
-                                    val scaledContentActualWidth = contentRenderedWidth * newScale
-                                    val scaledContentActualHeight = contentRenderedHeight * newScale
-
-                                    val maxPanX = if (scaledContentActualWidth > viewWidth) (scaledContentActualWidth - viewWidth) / 2f else 0f
-                                    val maxPanY = if (scaledContentActualHeight > viewHeight) (scaledContentActualHeight - viewHeight) / 2f else 0f
-
-                                    newOffsetX = newOffsetX.coerceIn(-maxPanX, maxPanX)
-                                    newOffsetY = newOffsetY.coerceIn(-maxPanY, maxPanY)
-
-                                    if (scaledContentActualWidth <= viewWidth) newOffsetX = 0f
-                                    if (scaledContentActualHeight <= viewHeight) newOffsetY = 0f
-                                }
-                                
-                                imageDetailViewModel.updateTransform(newScale, newOffsetX, newOffsetY)
-
-                                coroutineScope.launch {
-                                    scaleAnimatable.snapTo(newScale)
-                                    offsetXAnimatable.snapTo(newOffsetX)
-                                    offsetYAnimatable.snapTo(newOffsetY)
+                                    coroutineScope.launch {
+                                        scaleAnimatable.snapTo(newScale)
+                                        offsetXAnimatable.snapTo(newOffsetX)
+                                        offsetYAnimatable.snapTo(newOffsetY)
+                                    }
                                 }
                             }
+                            .background(parseColor(currentPhoto.avgColor)),
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(parseColor(currentPhoto.avgColor))
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                            }
+                        },
+                        error = {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.BrokenImage, contentDescription = "Error loading image", tint = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        success = { state ->
+                            SubcomposeAsyncImageContent()
                         }
-                        .background(parseColor(currentPhoto.avgColor)),
-                    loading = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(parseColor(currentPhoto.avgColor))
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                        }
-                    },
-                    error = {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.BrokenImage, contentDescription = "Error loading image", tint = MaterialTheme.colorScheme.error)
-                        }
-                    },
-                    success = { state ->
-                        SubcomposeAsyncImageContent()
-                    }
-                )
+                    )
 
-                Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Photographer: ${currentPhoto.photographer}", style = MaterialTheme.typography.titleMedium)
-                    Text("Source: Pexels.com", style = MaterialTheme.typography.bodySmall)
-                    if (currentPhoto.photographerUrl.isNotBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .sizeIn(minHeight = 48.dp)
-                                .clickable { uriHandler.openUri(currentPhoto.photographerUrl) },
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text(
-                                text = "View photographer\'s profile",
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
+                    Column(modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Photographer: ${currentPhoto.photographer}", style = MaterialTheme.typography.titleMedium)
+                        Text("Source: Pexels.com", style = MaterialTheme.typography.bodySmall)
+                        if (currentPhoto.photographerUrl.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sizeIn(minHeight = 48.dp)
+                                    .clickable { uriHandler.openUri(currentPhoto.photographerUrl) },
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = "View photographer\'s profile",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
                         }
-                    }
-                    if (currentPhoto.alt.isNotBlank()) {
-                        Text("Description: ${currentPhoto.alt}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                        if (currentPhoto.alt.isNotBlank()) {
+                            Text("Description: ${currentPhoto.alt}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                        }
                     }
                 }
+            }
 
-            } else {
+            if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (photoId != 0) { // Show loading if photoId is valid but photoFromVM is null
-                         CircularProgressIndicator()
-                    } else {
-                        Text("Invalid Photo ID or data unavailable.")
-                    }
+                    CircularProgressIndicator()
                 }
+            }
+
+            uiState.error?.let {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ErrorView(
+                        error = it,
+                        onRetry = {
+                            imageDetailViewModel.signalLoadingPhoto()
+                            var foundPhotoRetry: Photo? = homeScreenViewModel.getPhotoById(photoId)
+                            if (foundPhotoRetry == null) {
+                                foundPhotoRetry = searchViewModel.getPhotoById(photoId)
+                            }
+                            imageDetailViewModel.setPhotoDetails(foundPhotoRetry)
+                        },
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
+            if (!uiState.isLoading && uiState.photo == null && uiState.error == null && photoId != 0) {
+                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                     Text("Photo details not found.")
+                 }
             }
         }
     }

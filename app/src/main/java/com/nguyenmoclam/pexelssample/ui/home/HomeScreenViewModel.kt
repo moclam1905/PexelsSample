@@ -232,4 +232,8 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
     }
+
+    fun getPhotoById(id: Int): com.nguyenmoclam.pexelssample.domain.model.Photo? {
+        return (uiState.value as? HomeScreenUiState.Content)?.photos?.find { it.id == id }
+    }
 } 

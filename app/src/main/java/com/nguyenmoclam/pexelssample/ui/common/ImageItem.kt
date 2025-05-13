@@ -115,7 +115,7 @@ fun SharedTransitionScope.ImageItem(
                 contentScale = imageContentScale,
                 modifier = imageDisplayModifier,
                 onState = { state ->
-                    showShimmer = state is AsyncImagePainter.State.Loading
+                    showShimmer = state is AsyncImagePainter.State.Loading && dynamicHeight
                 },
                 content = {
                     val painterState = painter.state
