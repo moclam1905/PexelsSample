@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.CancellationException
 
 // Define items per page here or retrieve from a config if needed
 private const val ITEMS_PER_PAGE = 30 // Default: 15 Max: 80
@@ -37,6 +41,17 @@ class HomeScreenViewModel @Inject constructor(
     private val _paginationError = MutableStateFlow<String?>(null)
     val paginationError: StateFlow<String?> = _paginationError.asStateFlow()
 
+    // State for manual refresh action (Story 10.4)
+    private val _isRefreshingManual = MutableStateFlow(false)
+    val isRefreshingManual: StateFlow<Boolean> = _isRefreshingManual.asStateFlow()
+
+    // Event for one-time Snackbar messages (Story 10.4)
+    private val _snackbarEvent = MutableSharedFlow<String>()
+    val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
+
+    // Keep track of current page for curated photos (needed for reset on manual refresh)
+    private var currentCuratedPage = 1 // Initial page is 1
+
     init {
         fetchInitialPhotos()
     }
@@ -53,6 +68,7 @@ class HomeScreenViewModel @Inject constructor(
                     is PhotosResult.Success -> {
                         _photos.value = result.photos
                         _nextPageUrl.value = result.nextPageUrl
+                        currentCuratedPage = 1 // Reset page number on initial load
                         Logger.d("HomeScreenViewModel", "Initial photos loaded. Next page URL: ${result.nextPageUrl}")
                     }
                     is PhotosResult.Error -> {
@@ -109,6 +125,9 @@ class HomeScreenViewModel @Inject constructor(
                         }
 
                         _nextPageUrl.value = result.nextPageUrl
+                        if (result.nextPageUrl != null) {
+                            currentCuratedPage++ // Increment page number only on successful load with a next page
+                        }
                         Logger.d("HomeScreenViewModel", "More photos loaded successfully. Photos added: ${newPhotos.size}. Next page URL: ${result.nextPageUrl}")
                     }
                     is PhotosResult.Error -> {
@@ -122,6 +141,56 @@ class HomeScreenViewModel @Inject constructor(
 
             } finally {
                 _isLoadingNextPage.value = false
+            }
+        }
+    }
+
+    // Story 10.4: User-initiated manual refresh
+    fun onManualRefreshTriggered() {
+        // AC6: Prevent concurrent refresh/load operations
+        if (_isLoadingInitial.value || _isRefreshingManual.value || _isLoadingNextPage.value) {
+            Logger.d("HomeScreenViewModel", "Skipping manual refresh: Already loading/refreshing.")
+            return
+        }
+
+        viewModelScope.launch {
+            _isRefreshingManual.value = true
+            _paginationError.value = null // Clear pagination error on manual refresh
+            // Optionally clear main error state if applicable: _errorState.value = null
+
+            try {
+                Logger.d("HomeScreenViewModel", "Manual refresh triggered. Fetching page 1.")
+                // AC2: Re-fetch page 1 of curated photos
+                when (val result = imageRepository.getCuratedPhotos(page = 1, perPage = ITEMS_PER_PAGE)) {
+                    is PhotosResult.Success -> {
+                        // AC4: Replace list, reset pagination
+                        _photos.value = result.photos
+                        _nextPageUrl.value = result.nextPageUrl
+                        currentCuratedPage = 1 // Reset page number
+                        _paginationError.value = null // Clear pagination error on success
+                        Logger.d("HomeScreenViewModel", "Manual refresh successful. Next page URL: ${result.nextPageUrl}")
+                        // AC5: Emit success Snackbar message
+                        _snackbarEvent.emit("Trending photos updated.")
+                    }
+                    is PhotosResult.Error -> {
+                        Logger.e("HomeScreenViewModel", "Error during manual refresh: Message=${result.message}")
+                        // AC5: Emit failure Snackbar message
+                        _snackbarEvent.emit("Failed to refresh. ${result.message ?: "Please try again."}")
+                        // Optionally set main error state if needed, e.g., if photos list becomes empty
+                        // if (_photos.value.isEmpty()) { _errorState.value = result.message }
+                    }
+                }
+            } catch (e: CancellationException) {
+              throw e // Re-throw cancellation exceptions
+            } catch (e: Exception) {
+                Logger.e("HomeScreenViewModel", "Unexpected error during manual refresh: ${e.message}", e)
+                // AC5: Emit failure Snackbar message for unexpected errors
+                _snackbarEvent.emit("Failed to refresh. An unexpected error occurred.")
+                // Optionally set main error state
+                // if (_photos.value.isEmpty()) { _errorState.value = "An unexpected error occurred." }
+            } finally {
+                // AC3: Ensure state is reset
+                _isRefreshingManual.value = false
             }
         }
     }

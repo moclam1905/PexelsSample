@@ -24,6 +24,8 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.debounce
+import androidx.compose.material.icons.filled.Refresh
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, FlowPreview::class)
 @Composable
@@ -39,9 +41,13 @@ fun SharedTransitionScope.HomeScreen(
     val isLoadingNextPage by viewModel.isLoadingNextPage.collectAsStateWithLifecycle()
     val nextPageUrl by viewModel.nextPageUrl.collectAsStateWithLifecycle()
     val paginationErrorString by viewModel.paginationError.collectAsStateWithLifecycle()
+    val isRefreshingManual by viewModel.isRefreshingManual.collectAsStateWithLifecycle()
 
     // Remember the grid state
     val gridState = rememberLazyStaggeredGridState()
+
+    // Story 10.4: Snackbar host state
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Calculate column count based on width class (Story 10.3)
     val columnCount = when (windowSizeClass.widthSizeClass) {
@@ -74,11 +80,32 @@ fun SharedTransitionScope.HomeScreen(
             }
     }
 
+    // Story 10.4: Observe Snackbar events
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvent.collectLatest { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Trending Photos") },
                 actions = {
+                    IconButton(
+                        onClick = { viewModel.onManualRefreshTriggered() },
+                        enabled = !isRefreshingManual && !isLoading
+                    ) {
+                        if (isRefreshingManual) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Refresh Trending Photos")
+                        }
+                    }
                     IconButton(onClick = {
                         navController.navigate(ScreenRoutes.ADAPTIVE_SEARCH_RESULTS)
                     }) {
